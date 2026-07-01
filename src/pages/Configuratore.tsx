@@ -5,7 +5,7 @@ import { IM, waLink, mailLink } from "../lib/site";
 
 // Immagine "auto coperta" (telo di seta blu con logo). File caricato: public/img/AUTO IM.webp
 const COVERED = "/img/AUTO%20IM.webp";
-const BRANDS = ["Mercedes-Benz", "BMW", "Audi", "Porsche", "Volkswagen", "Land Rover", "Tesla", "Alfa Romeo", "Fiat"];
+const BRANDS = ["Porsche", "Audi", "Mercedes-Benz", "BMW", "Maserati"];
 const COLORS = [
   ["Nero", "#0c0c0f", "rgba(120,130,150,.35)"], ["Bianco", "#f2f4f7", "rgba(200,210,230,.4)"],
   ["Grigio", "#6b7180", "rgba(140,150,170,.4)"], ["Argento", "#c4c9d2", "rgba(190,200,215,.4)"],

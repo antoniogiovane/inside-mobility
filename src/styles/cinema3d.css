@@ -1,6 +1,6 @@
 /* Intro 3D scroll-driven */
 .c3d{position:relative;height:460vh;background:#04060c}
-.c3d-stage{position:sticky;top:0;height:100svh;overflow:hidden;background:radial-gradient(120% 90% at 50% 34%,#0d1730 0%,#070b16 55%,#03040a 100%)}
+.c3d-stage{position:sticky;top:0;height:100svh;overflow:hidden;background:#000}
 .c3d-canvas{position:absolute;inset:0;z-index:1}
 .c3d-overlay{position:absolute;inset:0;z-index:2;pointer-events:none}
 .c3d-overlay .in-pointer{pointer-events:auto}
@@ -27,7 +27,7 @@
 @keyframes introBlink{0%,100%{opacity:1}50%{opacity:.22}}
 
 /* Schermata nera di avvio: logo lampeggiante finché il modello 3D non è pronto */
-.c3d-boot{position:absolute;inset:0;z-index:6;background:#04060c;display:grid;place-content:center;justify-items:center;gap:1.1rem;
+.c3d-boot{position:absolute;inset:0;z-index:960;background:#000;display:grid;place-content:center;justify-items:center;gap:1.1rem;
   transition:opacity .7s ease,visibility .7s ease}
 .c3d-boot img{width:104px;filter:drop-shadow(0 0 34px rgba(31,111,242,.55));animation:introBlink 1.15s ease-in-out infinite}
 .c3d-boot span{font-family:var(--font-display);letter-spacing:.34em;font-weight:800;font-size:.8rem;color:#eaf0fb}

@@ -57,7 +57,7 @@ function CarGLB({ onReady }: { onReady: ReadyCb }) {
     }
     onReady(scene, door, mixer, action, wheel);
   }, [scene]);
-  return <primitive object={scene} position={[0, CAR_CONFIG.yOffset, 0]} scale={CAR_CONFIG.scale} />;
+  return <primitive object={scene} scale={CAR_CONFIG.scale} />;
 }
 
 /* ---------- Auto di riserva (SOLO se manca del tutto il GLB) ---------- */
@@ -104,46 +104,46 @@ function sampleKeys(keys: Key[], key: "pos" | "tgt", p: number) {
 }
 
 function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>; mobile: boolean }) {
-  const root = useRef<THREE.Object3D | null>(null);
-  const door = useRef<THREE.Object3D | null>(null);
+  const root = useRef<THREE.Object3D | null>(null);   // il modello (geometria)
+  const spin = useRef<THREE.Group>(null);             // pivot centrato: l'auto ruota su sé stessa
   const wheel = useRef<THREE.Object3D | null>(null);
-  const doorBase = useRef(0);
-  const mixer = useRef<THREE.AnimationMixer | null>(null);
-  const action = useRef<THREE.AnimationAction | null>(null);
-  const center = useRef(new THREE.Vector3(0, 0.6, 0));
-  const size = useRef(new THREE.Vector3(1.9, 1.3, 4.5));
-  const wpos = useRef(new THREE.Vector3(-0.35, 0.75, -0.9));
+  const wpos = useRef(new THREE.Vector3(-0.45, 0.79, -0.03));
   const keys = useRef<Key[]>([]);
   const built = useRef(false);
   const cabinLight = useRef<THREE.PointLight>(null);
 
   const build = () => {
-    if (!root.current) return;
+    if (!root.current || !spin.current) return;
+    // misura il modello a riposo
+    root.current.position.set(0, 0, 0);
     root.current.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(root.current);
-    box.getCenter(center.current); box.getSize(size.current);
-    const c = center.current, s = size.current, w = wpos.current;
-    if (wheel.current) { wheel.current.updateWorldMatrix(true, false); wheel.current.getWorldPosition(w); }
-    else {
-      const sgn = CAR_CONFIG.entrySide === "right" ? 1 : -1;
-      w.set(c.x + sgn * 0.18 * s.x, c.y + 0.10 * s.y, c.z - 0.28 * s.z);
-    }
-    const side = Math.abs(w.x - c.x) > 0.01 ? Math.sign(w.x - c.x) : (CAR_CONFIG.entrySide === "right" ? 1 : -1);
-    const Uz = Math.sign(c.z - w.z) || 1; // dal volante verso il sedile/abitacolo
+    const c = new THREE.Vector3(), s = new THREE.Vector3();
+    box.getCenter(c); box.getSize(s);
+    // CENTRA la geometria sull'origine del pivot e appoggia le ruote a terra
+    root.current.position.set(-c.x, -c.y, -c.z);
+    spin.current.position.set(0, c.y - box.min.y, 0);
+    spin.current.updateWorldMatrix(true, true);
+    // posizione REALE del volante nel nuovo sistema (a riposo)
+    const w = wpos.current;
+    if (wheel.current) wheel.current.getWorldPosition(w);
+    else w.set(-0.45, (c.y - box.min.y) + 0.14, -0.03);
+    const cx = 0, cy = c.y - box.min.y, cz = 0;                 // centro auto nel mondo
+    const zside = CAR_CONFIG.entrySide === "right" ? 1 : -1;    // lato d'ingresso lungo Z (porta lato guida)
+    // Orientamento REALE del modello: lunghezza su X (muso a -X), larghezza/porta su Z, altezza Y.
     keys.current = [
-      { p: 0.00, pos: [c.x, c.y + 0.45 * s.y, c.z + 2.55 * s.z], tgt: [c.x, c.y + 0.18 * s.y, c.z] },
-      { p: 0.45, pos: [c.x, c.y + 0.40 * s.y, c.z + 1.45 * s.z], tgt: [c.x, c.y + 0.22 * s.y, c.z] },
-      { p: 0.64, pos: [c.x + side * 2.35 * s.x, c.y + 0.10 * s.y, c.z], tgt: [c.x, c.y + 0.05 * s.y, c.z] },
-      { p: 0.82, pos: [c.x + side * 1.05 * s.x, c.y + 0.06 * s.y, w.z + Uz * 0.34 * s.z], tgt: [w.x, w.y + 0.02 * s.y, w.z] },
-      { p: 0.93, pos: [w.x + side * 0.06 * s.x, w.y + 0.16 * s.y, w.z + Uz * 0.30 * s.z], tgt: [w.x, w.y, w.z] },
-      { p: 1.00, pos: [w.x + side * 0.02 * s.x, w.y + 0.07 * s.y, w.z + Uz * 0.11 * s.z], tgt: [w.x, w.y, w.z] },
+      { p: 0.00, pos: [cx - 3.4, cy + 1.05, cz + zside * 11.5], tgt: [cx, cy + 0.10, cz] },       // lontano, auto MOLTO piccola, centrata
+      { p: 0.45, pos: [cx - 2.2, cy + 0.72, cz + zside * 6.4],  tgt: [cx, cy + 0.10, cz] },        // avvicinamento (l'auto ruota)
+      { p: 0.62, pos: [cx - 0.35, cy + 0.42, cz + zside * 3.7], tgt: [cx - 0.25, cy + 0.16, cz] }, // ferma DI LATO (profilo, sportello aperto)
+      { p: 0.80, pos: [cx - 0.40, cy + 0.34, cz + zside * 1.75], tgt: [w.x, w.y + 0.02, w.z] },    // sulla soglia, sguardo al volante
+      { p: 0.90, pos: [w.x + 0.52, w.y + 0.12, w.z + zside * 0.18], tgt: [w.x, w.y, w.z] },        // dentro, dietro il volante
+      { p: 1.00, pos: [w.x + 0.30, w.y + 0.06, w.z + zside * 0.10], tgt: [w.x, w.y, w.z] },        // ZOOM sullo stemma Porsche del volante
     ];
     built.current = true;
   };
 
-  const onReady: ReadyCb = (r, d, m, a, wh) => {
-    root.current = r; door.current = d; mixer.current = m; action.current = a; wheel.current = wh;
-    if (d) doorBase.current = (d.rotation as any)[CAR_CONFIG.doorHingeAxis];
+  const onReady: ReadyCb = (r, _d, _m, _a, wh) => {
+    root.current = r; wheel.current = wh;
     build();
   };
 
@@ -155,17 +155,9 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     camera.position.set(pos[0], pos[1], pos[2]);
     camera.lookAt(tgt[0], tgt[1], tgt[2]);
     // luce d'abitacolo: si accende nell'ingresso per illuminare il volante
-    if (cabinLight.current) { cabinLight.current.position.set(wpos.current.x, wpos.current.y + 0.18, wpos.current.z); cabinLight.current.intensity = 3 * ss(0.78, 0.98, p); }
-    // UN SOLO giro completo (360°), sportello CHIUSO durante il giro (0.05 -> 0.50)
-    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.05, 0.50, p);
-    // SPORTELLO: si apre a giro finito (0.50 -> 0.66), prima dell'ingresso
-    const open = ss(0.50, 0.66, p);
-    if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
-      const dur = action.current.getClip().duration || 1;
-      action.current.time = dur * open; mixer.current.update(0);
-    } else if (door.current) {
-      (door.current.rotation as any)[CAR_CONFIG.doorHingeAxis] = doorBase.current - THREE.MathUtils.degToRad(CAR_CONFIG.doorOpenAngleDeg) * open;
-    }
+    if (cabinLight.current) { cabinLight.current.position.set(wpos.current.x, wpos.current.y + 0.2, wpos.current.z); cabinLight.current.intensity = 3.2 * ss(0.78, 0.98, p); }
+    // UN SOLO giro completo su sé stessa (pivot centrato), 0.05 -> 0.55
+    if (spin.current) spin.current.rotation.y = -Math.PI * 2 * ss(0.05, 0.55, p);
   });
 
   return (
@@ -180,8 +172,8 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
         <Lightformer intensity={1.2} position={[5, 2, 2]} scale={[6, 6, 1]} color="#ffffff" />
       </Environment>
 
-      <group position={[0, -0.02, 0]}>
-        {/* Niente auto segnaposto durante il caricamento: la copertura nera + logo è gestita dall'overlay boot */}
+      <group ref={spin}>
+        {/* pivot centrato: l'auto ruota su sé stessa. Niente auto segnaposto: il nero+logo è nell'overlay boot */}
         <Suspense fallback={null}>
           <GLBBoundary fallback={<FallbackCar onReady={onReady} />}>
             <CarGLB onReady={onReady} />

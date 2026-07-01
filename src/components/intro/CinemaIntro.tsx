@@ -80,17 +80,17 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
 }
 
 /* ---------- Regia: camera pilotata dallo scroll ----------
-   0.00  auto piccola e centrata, lontana
-   0.35  avvicinamento frontale (zoom graduale)
-   0.60  la camera ruota verso il lato guida (ROTAZIONE)
-   0.82  vicino allo sportello (che si APRE)
-   1.00  dentro l'abitacolo, zoom finale -> parte il sito              */
+   0.00  auto piccola e centrata, lontana (sportello CHIUSO)
+   ~     l'auto compie un GIRO COMPLETO su se stessa (rotazione 360°)
+   0.60  verso fine rotazione si APRE lo sportello lato guida
+   0.85  la camera si avvicina allo sportello aperto
+   1.00  ingresso in abitacolo, immersione e zoom finale -> parte il sito */
 const CAM = [
-  { p: 0.00, pos: [0, 1.55, 10.6], tgt: [0, 0.95, 0] },
-  { p: 0.35, pos: [0, 1.45, 6.6], tgt: [0, 1.0, 0] },
-  { p: 0.60, pos: [3.25, 1.35, 4.3], tgt: [0.1, 1.05, 0] },
-  { p: 0.82, pos: [1.5, 1.2, 1.95], tgt: [0.22, 1.08, -0.2] },
-  { p: 1.00, pos: [0.24, 1.16, 0.14], tgt: [0.1, 1.12, -4] },
+  { p: 0.00, pos: [0, 1.5, 10.6], tgt: [0, 0.95, 0] },
+  { p: 0.50, pos: [0, 1.42, 6.2], tgt: [0, 1.0, 0] },
+  { p: 0.72, pos: [2.4, 1.32, 4.0], tgt: [0.15, 1.05, 0] },
+  { p: 0.88, pos: [1.25, 1.2, 1.8], tgt: [0.22, 1.08, -0.25] },
+  { p: 1.00, pos: [0.22, 1.15, 0.10], tgt: [0.1, 1.12, -4] },
 ];
 function sample(key: "pos" | "tgt", p: number) {
   if (p <= CAM[0].p) return CAM[0][key];
@@ -119,10 +119,10 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     const tgt = sample("tgt", p) as number[];
     camera.position.set(pos[0], pos[1], pos[2]);
     camera.lookAt(tgt[0], tgt[1], tgt[2]);
-    // ROTAZIONE dell'auto: avviene nella fase centrale (0.42 -> 0.80)
-    if (root.current) root.current.rotation.y = -0.55 * ss(0.42, 0.80, p);
-    // SPORTELLO: resta CHIUSO finché non è avvenuta la rotazione, poi si apre (0.74 -> 0.94)
-    const open = ss(0.74, 0.94, p);
+    // ROTAZIONE COMPLETA dell'auto su se stessa (giro di 360°) tra 0.08 e 0.66
+    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.08, 0.66, p);
+    // SPORTELLO: resta CHIUSO durante il giro, poi si apre verso la fine (0.60 -> 0.80)
+    const open = ss(0.60, 0.80, p);
     if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
       const dur = action.current.getClip().duration || 1;
       action.current.time = dur * open; mixer.current.update(0);
@@ -217,12 +217,19 @@ export default function CinemaIntro() {
       if (hero.current) { const h = ss(0.72, 0.93, p); hero.current.style.opacity = String(h); hero.current.style.transform = `translate(-50%, ${20 * (1 - h)}px)`; hero.current.style.pointerEvents = h > 0.9 ? "auto" : "none"; }
       if (cue.current) cue.current.style.opacity = String((1 - ss(0.02, 0.1, p)) * (ready ? 1 : 0));
       if (bar.current) bar.current.style.width = p * 100 + "%";
+      // header e menu compaiono solo a intro conclusa
+      document.body.classList.toggle("intro-lock", p < 0.985);
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    document.body.classList.add("intro-lock");
     frame();
-    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      document.body.classList.remove("intro-lock");
+    };
   }, [reduce, ready]);
 
   return (
@@ -230,8 +237,8 @@ export default function CinemaIntro() {
       <div className="c3d-stage">
         {!reduce && (
           <div className="c3d-canvas">
-            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.55, 10.6], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
-              <color attach="background" args={["#04060c"]} />
+            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.5, 10.6], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
+              <color attach="background" args={["#000000"]} />
               <Scene progress={progress} mobile={isMobile} />
             </Canvas>
           </div>

@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useMemo, useRef, ReactNode } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Lightformer, ContactShadows, MeshReflectorMaterial, useGLTF } from "@react-three/drei";
+import { Environment, Lightformer, ContactShadows, MeshReflectorMaterial, useGLTF, useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { Link } from "react-router-dom";
 import { CAR_CONFIG } from "./carConfig";
@@ -8,6 +8,9 @@ import "../../styles/cinema3d.css";
 
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 const ss = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+/* Riconoscimento automatico dello sportello guidatore (se il nome esatto non è impostato) */
+const DOOR_RE = /door|porta|portiere|sportello|t(u|ü)r|puerta|dhalf|dl_|_dl|door_fl|fl_door/i;
 
 /* ---------- Boundary per GLB mancante ---------- */
 class GLBBoundary extends React.Component<{ fallback: ReactNode; children: ReactNode }, { err: boolean }> {
@@ -30,9 +33,16 @@ function CarGLB({ onReady }: { onReady: ReadyCb }) {
       const m = o as THREE.Mesh;
       if ((m as any).isMesh) { m.castShadow = true; m.receiveShadow = true; }
     });
-    console.log("[Inside Mobility] Nodi del GLB:", names);
+    console.log("%c[Inside Mobility] NODI del GLB (copiali e mandali a Claude):", "color:#1f6ff2;font-weight:bold");
+    console.log(names.join("\n"));
     console.log("[Inside Mobility] Animazioni:", (gltf.animations || []).map((a: any) => a.name));
-    const door = scene.getObjectByName(CAR_CONFIG.driverDoorNodeName) || null;
+
+    // 1) nome esatto dalla config  2) se non c'è, cerco un nodo "porta"
+    let door: THREE.Object3D | null = scene.getObjectByName(CAR_CONFIG.driverDoorNodeName) || null;
+    if (!door) { scene.traverse((o: THREE.Object3D) => { if (!door && o.name && DOOR_RE.test(o.name)) door = o; }); }
+    if (door) console.log("[Inside Mobility] Sportello trovato:", (door as THREE.Object3D).name);
+    else console.log("[Inside Mobility] Nessuno sportello separato: uso il finale con ingresso camera.");
+
     let mixer: THREE.AnimationMixer | null = null, action: THREE.AnimationAction | null = null;
     if (CAR_CONFIG.hasDoorAnimationClip && gltf.animations?.length) {
       mixer = new THREE.AnimationMixer(scene);
@@ -44,7 +54,7 @@ function CarGLB({ onReady }: { onReady: ReadyCb }) {
   return <primitive object={scene} position={[0, CAR_CONFIG.yOffset, 0]} scale={CAR_CONFIG.scale} />;
 }
 
-/* ---------- Auto di riserva (se manca il GLB) ---------- */
+/* ---------- Auto di riserva (SOLO se manca del tutto il GLB) ---------- */
 function FallbackCar({ onReady }: { onReady: ReadyCb }) {
   const g = useRef<THREE.Group>(null);
   const door = useRef<THREE.Group>(null);
@@ -69,12 +79,18 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
   );
 }
 
-/* ---------- Scena + regia (camera pilotata dallo scroll) ---------- */
+/* ---------- Regia: camera pilotata dallo scroll ----------
+   0.00  auto piccola e centrata, lontana
+   0.35  avvicinamento frontale (zoom graduale)
+   0.60  la camera ruota verso il lato guida (ROTAZIONE)
+   0.82  vicino allo sportello (che si APRE)
+   1.00  dentro l'abitacolo, zoom finale -> parte il sito              */
 const CAM = [
-  { p: 0.00, pos: [0, 1.75, 8.4], tgt: [0, 0.9, 0] },
-  { p: 0.45, pos: [2.7, 1.25, 4.4], tgt: [0, 1.0, 0] },
-  { p: 0.78, pos: [1.15, 1.15, 1.75], tgt: [0.15, 1.05, -0.2] },
-  { p: 1.00, pos: [0.22, 1.16, 0.18], tgt: [0.1, 1.12, -4] },
+  { p: 0.00, pos: [0, 1.55, 10.6], tgt: [0, 0.95, 0] },
+  { p: 0.35, pos: [0, 1.45, 6.6], tgt: [0, 1.0, 0] },
+  { p: 0.60, pos: [3.25, 1.35, 4.3], tgt: [0.1, 1.05, 0] },
+  { p: 0.82, pos: [1.5, 1.2, 1.95], tgt: [0.22, 1.08, -0.2] },
+  { p: 1.00, pos: [0.24, 1.16, 0.14], tgt: [0.1, 1.12, -4] },
 ];
 function sample(key: "pos" | "tgt", p: number) {
   if (p <= CAM[0].p) return CAM[0][key];
@@ -103,8 +119,10 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     const tgt = sample("tgt", p) as number[];
     camera.position.set(pos[0], pos[1], pos[2]);
     camera.lookAt(tgt[0], tgt[1], tgt[2]);
-    if (root.current) root.current.rotation.y = -0.62 * ss(0.08, 0.6, p);
-    const open = ss(0.66, 0.9, p);
+    // ROTAZIONE dell'auto: avviene nella fase centrale (0.42 -> 0.80)
+    if (root.current) root.current.rotation.y = -0.55 * ss(0.42, 0.80, p);
+    // SPORTELLO: resta CHIUSO finché non è avvenuta la rotazione, poi si apre (0.74 -> 0.94)
+    const open = ss(0.74, 0.94, p);
     if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
       const dur = action.current.getClip().duration || 1;
       action.current.time = dur * open; mixer.current.update(0);
@@ -125,7 +143,8 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
       </Environment>
 
       <group position={[0, -0.02, 0]}>
-        <Suspense fallback={<FallbackCar onReady={onReady} />}>
+        {/* Niente auto segnaposto durante il caricamento: la copertura nera + logo è gestita dall'overlay boot */}
+        <Suspense fallback={null}>
           <GLBBoundary fallback={<FallbackCar onReady={onReady} />}>
             <CarGLB onReady={onReady} />
           </GLBBoundary>
@@ -146,6 +165,18 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
   );
 }
 
+/* ---------- Overlay di caricamento (schermo nero + logo lampeggiante) ---------- */
+function BootScreen({ done }: { done: boolean }) {
+  const { progress } = useProgress();
+  return (
+    <div className={"c3d-boot" + (done ? " hide" : "")}>
+      <img src="/img/mark.png" alt="Inside Mobility" />
+      <span>INSIDE&nbsp;MOBILITY</span>
+      <i><b style={{ width: Math.round(progress) + "%" }} /></i>
+    </div>
+  );
+}
+
 /* ---------- Componente principale ---------- */
 export default function CinemaIntro() {
   const reduce = typeof window !== "undefined" && window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -159,6 +190,16 @@ export default function CinemaIntro() {
   const cue = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
+  // stato "modello pronto": chiude la schermata nera di boot
+  const { active, progress: loadPct } = useProgress();
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!active && loadPct >= 100) { const t = setTimeout(() => setReady(true), 350); return () => clearTimeout(t); }
+  }, [active, loadPct]);
+
+  // all'apertura riparti dall'alto, così l'intro inizia dalla schermata nera
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
   useEffect(() => {
     if (reduce || !sec.current) return;
     let ticking = false;
@@ -169,12 +210,12 @@ export default function CinemaIntro() {
       if (total <= 0) return;
       const p = clamp(-sec.current!.getBoundingClientRect().top / total, 0, 1);
       progress.current = p;
-      if (logo.current) logo.current.style.opacity = String(1 - ss(0.03, 0.12, p));
+      if (logo.current) logo.current.style.opacity = String(1 - ss(0.04, 0.13, p));
       const out = ss(0.5, 0.62, p);
       if (w1.current) { const a = ss(0.20, 0.34, p); w1.current.style.opacity = String(a * (1 - out)); w1.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       if (w2.current) { const a = ss(0.28, 0.42, p); w2.current.style.opacity = String(a * (1 - out)); w2.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       if (hero.current) { const h = ss(0.72, 0.93, p); hero.current.style.opacity = String(h); hero.current.style.transform = `translate(-50%, ${20 * (1 - h)}px)`; hero.current.style.pointerEvents = h > 0.9 ? "auto" : "none"; }
-      if (cue.current) cue.current.style.opacity = String(1 - ss(0.02, 0.1, p));
+      if (cue.current) cue.current.style.opacity = String((1 - ss(0.02, 0.1, p)) * (ready ? 1 : 0));
       if (bar.current) bar.current.style.width = p * 100 + "%";
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
@@ -182,14 +223,14 @@ export default function CinemaIntro() {
     window.addEventListener("resize", onScroll);
     frame();
     return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
-  }, [reduce]);
+  }, [reduce, ready]);
 
   return (
     <section className={"c3d" + (reduce ? " no-3d" : "")} ref={sec}>
       <div className="c3d-stage">
         {!reduce && (
           <div className="c3d-canvas">
-            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.75, 8.4], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
+            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.55, 10.6], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
               <color attach="background" args={["#04060c"]} />
               <Scene progress={progress} mobile={isMobile} />
             </Canvas>
@@ -216,6 +257,8 @@ export default function CinemaIntro() {
           <div className="c3d-cue" ref={cue}><span>Scorri</span><i></i></div>
         </div>
         <div className="c3d-bar"><i ref={bar}></i></div>
+
+        {!reduce && <BootScreen done={ready} />}
       </div>
     </section>
   );

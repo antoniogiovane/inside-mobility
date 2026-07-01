@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
 import { IM, waLink, mailLink } from "../lib/site";
 
-const COVERED = "/img/covered-car.svg";
+// Immagine "auto coperta" (telo di seta blu con logo). File caricato: public/img/AUTO IM.webp
+const COVERED = "/img/AUTO%20IM.webp";
 const BRANDS = ["Mercedes-Benz", "BMW", "Audi", "Porsche", "Volkswagen", "Land Rover", "Tesla", "Alfa Romeo", "Fiat"];
 const COLORS = [
   ["Nero", "#0c0c0f", "rgba(120,130,150,.35)"], ["Bianco", "#f2f4f7", "rgba(200,210,230,.4)"],
@@ -12,21 +13,8 @@ const COLORS = [
   ["Verde", "#1f6b4c", "rgba(31,150,110,.4)"], ["Beige", "#c9b79a", "rgba(201,183,154,.4)"],
 ];
 
-function brandSlug(b: string) { return b.trim().toLowerCase().replace("mercedes-benz", "mercedes").replace(/\s+/g, " "); }
-function modelSlug(m: string) {
-  const s = m.trim().toLowerCase();
-  const map: Record<string, string> = { "classe a": "a-class", "classe b": "b-class", "classe c": "c-class", "classe e": "e-class", "classe s": "s-class", "classe g": "g-class" };
-  if (map[s]) return map[s];
-  const bmw = s.match(/^serie\s*(\d)/); if (bmw) return bmw[1] + " series";
-  return s;
-}
-function CarShot({ marca, modello, className }: { marca: string; modello: string; className?: string }) {
-  const src = useMemo(() => {
-    if (marca.trim() && modello.trim())
-      return "https://cdn.imagin.studio/getimage?customer=hrjavascript-mastery&make=" + encodeURIComponent(brandSlug(marca)) + "&modelFamily=" + encodeURIComponent(modelSlug(modello)) + "&angle=23&width=1000&zoomType=fullscreen";
-    return COVERED;
-  }, [marca, modello]);
-  return <img className={className} src={src} alt="La tua auto, in arrivo" onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = COVERED; }} />;
+function CarShot({ className }: { marca?: string; modello?: string; className?: string }) {
+  return <img className={className} src={COVERED} alt="La tua auto, in arrivo" style={{ borderRadius: 14, width: "100%" }} />;
 }
 
 const empty = { marca: "", modello: "", cond: "", form: "", alim: "", cambio: "", budget: "", annokm: "", colore: "", colorHex: "", colorGlow: "", perso: "", note: "", nome: "", tel: "", email: "", citta: "" };

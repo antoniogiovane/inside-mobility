@@ -130,17 +130,18 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     if (wheel.current) wheel.current.getWorldPosition(w);
     else w.set(-0.45, (c.y - box.min.y) + 0.14, -0.03);
     const cx = 0, cy = c.y - box.min.y, cz = 0;                 // centro auto nel mondo
-    lightPos.current.set(cx + 0.15, cy + 0.4, cz - 0.4);        // luce sul cruscotto/volante
-    const zside = CAR_CONFIG.entrySide === "right" ? 1 : -1;    // lato d'ingresso lungo Z (porta lato guida)
-    // Orientamento REALE del modello: lunghezza su X (muso a -X), larghezza/porta su Z, altezza Y.
-    // Coordinate abitacolo (misurate sul modello reale: volante lato guida a z<0, verso il muso +X)
+    lightPos.current.set(0.15, cy + 0.35, 0.16);               // luce sul volante (lato guida +Z)
+    const zside = CAR_CONFIG.entrySide === "right" ? 1 : -1;    // lato dello SPORTELLO APERTO (-Z)
+    // Coordinate REALI (ispezionate sul modello): sportello aperto a -Z, volante/stemma a +Z.
+    // Lo stemma Porsche del volante è nel mondo a (0.205, cy+0.16, 0.13).
+    const ex = 0.205, ey = cy + 0.16, ez = 0.13;               // stemma Porsche del volante
     keys.current = [
-      { p: 0.00, pos: [cx - 3.4, cy + 1.05, cz + zside * 11.5], tgt: [cx, cy + 0.10, cz] },        // lontano, auto MOLTO piccola, centrata
-      { p: 0.45, pos: [cx - 2.2, cy + 0.72, cz + zside * 6.4],  tgt: [cx, cy + 0.10, cz] },         // avvicinamento (l'auto ruota su sé stessa)
-      { p: 0.62, pos: [cx - 0.35, cy + 0.42, cz + zside * 3.7], tgt: [cx - 0.25, cy + 0.16, cz] },  // ferma DI LATO (profilo, sportello aperto)
-      { p: 0.80, pos: [cx - 0.60, cy + 0.34, cz + zside * 1.6], tgt: [cx + 0.10, cy + 0.12, cz - 0.34] }, // sulla soglia, sguardo verso l'abitacolo
-      { p: 0.90, pos: [cx - 0.62, cy + 0.31, cz - 0.28],        tgt: [cx + 0.26, cy + 0.07, cz - 0.45] }, // dentro, verso il volante
-      { p: 1.00, pos: [cx - 0.46, cy + 0.265, cz - 0.40],       tgt: [cx + 0.30, cy + 0.055, cz - 0.46] }, // COCKPIT: volante con stemma Porsche + quadro Turbo S
+      { p: 0.00, pos: [cx - 3.4, cy + 1.05, cz + zside * 11.5], tgt: [cx, cy + 0.10, cz] },   // lontano, auto MOLTO piccola, centrata
+      { p: 0.45, pos: [cx - 2.2, cy + 0.72, cz + zside * 6.4],  tgt: [cx, cy + 0.10, cz] },    // avvicinamento (l'auto ruota su sé stessa)
+      { p: 0.60, pos: [cx - 0.30, cy + 0.42, cz + zside * 3.5], tgt: [cx - 0.15, cy + 0.16, cz] }, // profilo DI LATO, sportello aperto
+      { p: 0.76, pos: [cx - 0.05, cy + 0.30, cz + zside * 1.4], tgt: [ex, ey, ez] },           // sulla soglia dello sportello, sguardo al volante
+      { p: 0.88, pos: [cx + 0.00, cy + 0.27, cz - 0.10],        tgt: [ex, ey, ez] },           // entra e attraversa la cabina in avanti (davanti al sedile)
+      { p: 1.00, pos: [cx + 0.05, cy + 0.245, cz + 0.44],       tgt: [ex, ey, ez] },           // ZOOM finale sullo STEMMA PORSCHE del volante
     ];
     built.current = true;
   };

@@ -71,8 +71,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link to="/" className="brand"><img className="logo-mark" src="/img/mark.png" alt="Inside Mobility" /><span>Inside Mobility<small>Automotive Concierge</small></span></Link>
               <p>Il servizio che trova e ti consegna l'auto perfetta. Dall'idea alla guida.</p>
               <div className="socials">
-                <a href="#" aria-label="Instagram"><Icon name="ig" /></a>
-                <a href="#" aria-label="Facebook"><Icon name="fb" /></a>
+                <a href="https://www.instagram.com/insidemobility/" target="_blank" rel="noopener" aria-label="Instagram"><Icon name="ig" /></a>
                 <a href={"https://wa.me/" + IM.wa} target="_blank" rel="noopener" aria-label="WhatsApp"><Icon name="wa" /></a>
               </div>
             </div>

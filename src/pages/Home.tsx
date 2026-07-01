@@ -40,6 +40,18 @@ export default function Home() {
     <>
       <CinemaIntro />
 
+      <section className="intro-hero">
+        <div className="wrap" data-reveal>
+          <span className="pill"><span className="dot-live"></span> Servizio attivo in tutta Italia</span>
+          <h1 className="ih-title">Dall'idea alla guida.</h1>
+          <p className="lead">Non siamo una concessionaria. Siamo il servizio che trova <b>l'auto perfetta</b> per te — nuova, km 0 o usata, in acquisto, finanziamento, leasing o noleggio.</p>
+          <div className="hero-cta">
+            <Link to="/configuratore" className="btn btn-gold btn-lg">Configura la tua auto <span className="arrow">→</span></Link>
+            <Link to="/servizi" className="btn btn-ghost btn-lg">Scopri come funziona</Link>
+          </div>
+        </div>
+      </section>
+
       <div className="marquee" aria-hidden="true">
         <div className="marquee-track">
           {[...BRANDS, ...BRANDS].map((b, i) => <BrandLogo key={i} name={b.name} file={b.file} />)}

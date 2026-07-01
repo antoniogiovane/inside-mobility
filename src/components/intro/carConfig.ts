@@ -14,4 +14,7 @@ export const CAR_CONFIG = {
   doorOpenAngleDeg: 65,     // apertura massima porta (in gradi)
   hasDoorAnimationClip: false,     // true se il GLB ha già una clip di apertura
   doorAnimationClipName: "DoorOpen",
+  // Lato da cui la camera si avvicina ed entra (usato quando lo sportello NON è un nodo separato).
+  // Se l'ingresso avviene dal lato sbagliato, cambia "left" <-> "right".
+  entrySide: "left" as "left" | "right",
 };

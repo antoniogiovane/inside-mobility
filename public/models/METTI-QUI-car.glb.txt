@@ -1,0 +1,1 @@
+car.glb: metti qui il tuo modello 3D (rinominalo car.glb)

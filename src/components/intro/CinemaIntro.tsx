@@ -1,0 +1,224 @@
+import React, { Suspense, useEffect, useMemo, useRef, ReactNode } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Environment, Lightformer, ContactShadows, MeshReflectorMaterial, useGLTF } from "@react-three/drei";
+import * as THREE from "three";
+import { Link } from "react-router-dom";
+import { CAR_CONFIG } from "./carConfig";
+import "../../styles/cinema3d.css";
+
+const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+const ss = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+/* ---------- Boundary per GLB mancante ---------- */
+class GLBBoundary extends React.Component<{ fallback: ReactNode; children: ReactNode }, { err: boolean }> {
+  state = { err: false };
+  static getDerivedStateFromError() { return { err: true }; }
+  componentDidCatch(e: unknown) { console.warn("[Inside Mobility] car.glb non trovato: uso il modello di riserva. Metti il tuo file in public/models/car.glb", e); }
+  render() { return this.state.err ? this.props.fallback : this.props.children; }
+}
+
+type ReadyCb = (root: THREE.Object3D, door: THREE.Object3D | null, mixer: THREE.AnimationMixer | null, action: THREE.AnimationAction | null) => void;
+
+/* ---------- Modello GLB reale ---------- */
+function CarGLB({ onReady }: { onReady: ReadyCb }) {
+  const gltf = useGLTF(CAR_CONFIG.modelPath) as any;
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  useEffect(() => {
+    const names: string[] = [];
+    scene.traverse((o: THREE.Object3D) => {
+      if (o.name) names.push(o.type + ": " + o.name);
+      const m = o as THREE.Mesh;
+      if ((m as any).isMesh) { m.castShadow = true; m.receiveShadow = true; }
+    });
+    console.log("[Inside Mobility] Nodi del GLB:", names);
+    console.log("[Inside Mobility] Animazioni:", (gltf.animations || []).map((a: any) => a.name));
+    const door = scene.getObjectByName(CAR_CONFIG.driverDoorNodeName) || null;
+    let mixer: THREE.AnimationMixer | null = null, action: THREE.AnimationAction | null = null;
+    if (CAR_CONFIG.hasDoorAnimationClip && gltf.animations?.length) {
+      mixer = new THREE.AnimationMixer(scene);
+      const clip = THREE.AnimationClip.findByName(gltf.animations, CAR_CONFIG.doorAnimationClipName) || gltf.animations[0];
+      if (clip) { action = mixer.clipAction(clip); action.play(); action.paused = true; }
+    }
+    onReady(scene, door, mixer, action);
+  }, [scene]);
+  return <primitive object={scene} position={[0, CAR_CONFIG.yOffset, 0]} scale={CAR_CONFIG.scale} />;
+}
+
+/* ---------- Auto di riserva (se manca il GLB) ---------- */
+function FallbackCar({ onReady }: { onReady: ReadyCb }) {
+  const g = useRef<THREE.Group>(null);
+  const door = useRef<THREE.Group>(null);
+  useEffect(() => { if (g.current) onReady(g.current, door.current, null, null); }, []);
+  const paint = { color: "#1f6ff2", metalness: 0.7, roughness: 0.28 } as any;
+  const glass = { color: "#0f1c30", metalness: 0.4, roughness: 0.1 } as any;
+  const wheel = (x: number, z: number) => (
+    <mesh position={[x, 0.42, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+      <cylinderGeometry args={[0.42, 0.42, 0.32, 28]} />
+      <meshStandardMaterial color="#0c0e14" metalness={0.3} roughness={0.6} />
+    </mesh>
+  );
+  return (
+    <group ref={g}>
+      <mesh position={[0, 0.6, 0]} castShadow receiveShadow><boxGeometry args={[4.2, 0.7, 1.85]} /><meshStandardMaterial {...paint} /></mesh>
+      <mesh position={[-0.15, 1.02, 0]} castShadow><boxGeometry args={[2.3, 0.68, 1.62]} /><meshStandardMaterial {...glass} /></mesh>
+      <group ref={door} position={[0.55, 0.62, 0.92]}>
+        <mesh position={[0.55, 0, 0.02]} castShadow><boxGeometry args={[1.25, 0.6, 0.06]} /><meshStandardMaterial {...paint} /></mesh>
+      </group>
+      {wheel(1.35, 0.95)}{wheel(-1.35, 0.95)}{wheel(1.35, -0.95)}{wheel(-1.35, -0.95)}
+    </group>
+  );
+}
+
+/* ---------- Scena + regia (camera pilotata dallo scroll) ---------- */
+const CAM = [
+  { p: 0.00, pos: [0, 1.75, 8.4], tgt: [0, 0.9, 0] },
+  { p: 0.45, pos: [2.7, 1.25, 4.4], tgt: [0, 1.0, 0] },
+  { p: 0.78, pos: [1.15, 1.15, 1.75], tgt: [0.15, 1.05, -0.2] },
+  { p: 1.00, pos: [0.22, 1.16, 0.18], tgt: [0.1, 1.12, -4] },
+];
+function sample(key: "pos" | "tgt", p: number) {
+  if (p <= CAM[0].p) return CAM[0][key];
+  for (let i = 0; i < CAM.length - 1; i++) {
+    const a = CAM[i], b = CAM[i + 1];
+    if (p <= b.p) { const t = ss(a.p, b.p, p); return (a[key] as number[]).map((v, j) => v + ((b[key] as number[])[j] - v) * t); }
+  }
+  return CAM[CAM.length - 1][key];
+}
+
+function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>; mobile: boolean }) {
+  const root = useRef<THREE.Object3D | null>(null);
+  const door = useRef<THREE.Object3D | null>(null);
+  const doorBase = useRef(0);
+  const mixer = useRef<THREE.AnimationMixer | null>(null);
+  const action = useRef<THREE.AnimationAction | null>(null);
+
+  const onReady: ReadyCb = (r, d, m, a) => {
+    root.current = r; door.current = d; mixer.current = m; action.current = a;
+    if (d) doorBase.current = (d.rotation as any)[CAR_CONFIG.doorHingeAxis];
+  };
+
+  useFrame(({ camera }) => {
+    const p = progress.current;
+    const pos = sample("pos", p) as number[];
+    const tgt = sample("tgt", p) as number[];
+    camera.position.set(pos[0], pos[1], pos[2]);
+    camera.lookAt(tgt[0], tgt[1], tgt[2]);
+    if (root.current) root.current.rotation.y = -0.62 * ss(0.08, 0.6, p);
+    const open = ss(0.66, 0.9, p);
+    if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
+      const dur = action.current.getClip().duration || 1;
+      action.current.time = dur * open; mixer.current.update(0);
+    } else if (door.current) {
+      (door.current.rotation as any)[CAR_CONFIG.doorHingeAxis] = doorBase.current - THREE.MathUtils.degToRad(CAR_CONFIG.doorOpenAngleDeg) * open;
+    }
+  });
+
+  return (
+    <>
+      <ambientLight intensity={0.4} />
+      <spotLight position={[6, 8, 4]} angle={0.5} penumbra={1} intensity={2.2} castShadow={!mobile} shadow-bias={-0.0002} />
+      <spotLight position={[-6, 5, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#5b9dff" />
+      <Environment resolution={mobile ? 128 : 256}>
+        <Lightformer intensity={2.4} position={[0, 4, -6]} scale={[12, 5, 1]} />
+        <Lightformer intensity={1.2} position={[-5, 2, 2]} scale={[6, 6, 1]} color="#9cc4ff" />
+        <Lightformer intensity={1.2} position={[5, 2, 2]} scale={[6, 6, 1]} color="#ffffff" />
+      </Environment>
+
+      <group position={[0, -0.02, 0]}>
+        <Suspense fallback={<FallbackCar onReady={onReady} />}>
+          <GLBBoundary fallback={<FallbackCar onReady={onReady} />}>
+            <CarGLB onReady={onReady} />
+          </GLBBoundary>
+        </Suspense>
+      </group>
+
+      <ContactShadows position={[0, 0.001, 0]} opacity={0.6} scale={16} blur={2.6} far={6} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[60, 60]} />
+        {mobile ? (
+          <meshStandardMaterial color="#080d16" metalness={0.5} roughness={0.6} />
+        ) : (
+          <MeshReflectorMaterial blur={[260, 70]} resolution={1024} mixBlur={1} mixStrength={35} roughness={1}
+            depthScale={1.1} minDepthThreshold={0.4} maxDepthThreshold={1.25} color="#080d16" metalness={0.65} />
+        )}
+      </mesh>
+    </>
+  );
+}
+
+/* ---------- Componente principale ---------- */
+export default function CinemaIntro() {
+  const reduce = typeof window !== "undefined" && window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isMobile = typeof window !== "undefined" && window.matchMedia && matchMedia("(max-width: 768px)").matches;
+  const sec = useRef<HTMLElement>(null);
+  const progress = useRef(0);
+  const logo = useRef<HTMLDivElement>(null);
+  const w1 = useRef<HTMLSpanElement>(null);
+  const w2 = useRef<HTMLSpanElement>(null);
+  const hero = useRef<HTMLDivElement>(null);
+  const cue = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (reduce || !sec.current) return;
+    let ticking = false;
+    const frame = () => {
+      ticking = false;
+      const vh = window.innerHeight;
+      const total = sec.current!.offsetHeight - vh;
+      if (total <= 0) return;
+      const p = clamp(-sec.current!.getBoundingClientRect().top / total, 0, 1);
+      progress.current = p;
+      if (logo.current) logo.current.style.opacity = String(1 - ss(0.03, 0.12, p));
+      const out = ss(0.5, 0.62, p);
+      if (w1.current) { const a = ss(0.20, 0.34, p); w1.current.style.opacity = String(a * (1 - out)); w1.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
+      if (w2.current) { const a = ss(0.28, 0.42, p); w2.current.style.opacity = String(a * (1 - out)); w2.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
+      if (hero.current) { const h = ss(0.72, 0.93, p); hero.current.style.opacity = String(h); hero.current.style.transform = `translate(-50%, ${20 * (1 - h)}px)`; hero.current.style.pointerEvents = h > 0.9 ? "auto" : "none"; }
+      if (cue.current) cue.current.style.opacity = String(1 - ss(0.02, 0.1, p));
+      if (bar.current) bar.current.style.width = p * 100 + "%";
+    };
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    frame();
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
+  }, [reduce]);
+
+  return (
+    <section className={"c3d" + (reduce ? " no-3d" : "")} ref={sec}>
+      <div className="c3d-stage">
+        {!reduce && (
+          <div className="c3d-canvas">
+            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.75, 8.4], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
+              <color attach="background" args={["#04060c"]} />
+              <Scene progress={progress} mobile={isMobile} />
+            </Canvas>
+          </div>
+        )}
+
+        <div className="c3d-overlay">
+          <div className="c3d-logo" ref={logo}>
+            <img src="/img/mark.png" alt="Inside Mobility" />
+            <span>INSIDE&nbsp;MOBILITY</span>
+          </div>
+          <div className="c3d-words">
+            <span className="cw" ref={w1}>Trova l'auto</span>
+            <span className="cw gold-text" ref={w2}>dei tuoi sogni.</span>
+          </div>
+          <div className="c3d-hero in-pointer" ref={hero}>
+            <span className="pill"><span className="dot-live"></span> Servizio attivo su tutta Italia</span>
+            <p className="lead center">Non siamo una concessionaria. Siamo il servizio che trova <b>l'auto perfetta</b> per te — nuova, km 0 o usata, in acquisto, finanziamento, leasing o noleggio.</p>
+            <div className="hero-cta" style={{ justifyContent: "center" }}>
+              <Link to="/configuratore" className="btn btn-gold btn-lg">Configura la tua auto <span className="arrow">→</span></Link>
+              <Link to="/servizi" className="btn btn-ghost btn-lg">Scopri come funziona</Link>
+            </div>
+          </div>
+          <div className="c3d-cue" ref={cue}><span>Scorri</span><i></i></div>
+        </div>
+        <div className="c3d-bar"><i ref={bar}></i></div>
+      </div>
+    </section>
+  );
+}
+
+useGLTF.preload(CAR_CONFIG.modelPath);

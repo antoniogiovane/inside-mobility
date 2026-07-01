@@ -111,6 +111,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
   const keys = useRef<Key[]>([]);
   const built = useRef(false);
   const cabinLight = useRef<THREE.PointLight>(null);
+  const lightPos = useRef(new THREE.Vector3(0.15, 0.95, -0.4));
 
   const build = () => {
     if (!root.current || !spin.current) return;
@@ -129,15 +130,17 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     if (wheel.current) wheel.current.getWorldPosition(w);
     else w.set(-0.45, (c.y - box.min.y) + 0.14, -0.03);
     const cx = 0, cy = c.y - box.min.y, cz = 0;                 // centro auto nel mondo
+    lightPos.current.set(cx + 0.15, cy + 0.4, cz - 0.4);        // luce sul cruscotto/volante
     const zside = CAR_CONFIG.entrySide === "right" ? 1 : -1;    // lato d'ingresso lungo Z (porta lato guida)
     // Orientamento REALE del modello: lunghezza su X (muso a -X), larghezza/porta su Z, altezza Y.
+    // Coordinate abitacolo (misurate sul modello reale: volante lato guida a z<0, verso il muso +X)
     keys.current = [
-      { p: 0.00, pos: [cx - 3.4, cy + 1.05, cz + zside * 11.5], tgt: [cx, cy + 0.10, cz] },       // lontano, auto MOLTO piccola, centrata
-      { p: 0.45, pos: [cx - 2.2, cy + 0.72, cz + zside * 6.4],  tgt: [cx, cy + 0.10, cz] },        // avvicinamento (l'auto ruota)
-      { p: 0.62, pos: [cx - 0.35, cy + 0.42, cz + zside * 3.7], tgt: [cx - 0.25, cy + 0.16, cz] }, // ferma DI LATO (profilo, sportello aperto)
-      { p: 0.80, pos: [cx - 0.40, cy + 0.34, cz + zside * 1.75], tgt: [w.x, w.y + 0.02, w.z] },    // sulla soglia, sguardo al volante
-      { p: 0.90, pos: [w.x + 0.52, w.y + 0.12, w.z + zside * 0.18], tgt: [w.x, w.y, w.z] },        // dentro, dietro il volante
-      { p: 1.00, pos: [w.x + 0.30, w.y + 0.06, w.z + zside * 0.10], tgt: [w.x, w.y, w.z] },        // ZOOM sullo stemma Porsche del volante
+      { p: 0.00, pos: [cx - 3.4, cy + 1.05, cz + zside * 11.5], tgt: [cx, cy + 0.10, cz] },        // lontano, auto MOLTO piccola, centrata
+      { p: 0.45, pos: [cx - 2.2, cy + 0.72, cz + zside * 6.4],  tgt: [cx, cy + 0.10, cz] },         // avvicinamento (l'auto ruota su sé stessa)
+      { p: 0.62, pos: [cx - 0.35, cy + 0.42, cz + zside * 3.7], tgt: [cx - 0.25, cy + 0.16, cz] },  // ferma DI LATO (profilo, sportello aperto)
+      { p: 0.80, pos: [cx - 0.60, cy + 0.34, cz + zside * 1.6], tgt: [cx + 0.10, cy + 0.12, cz - 0.34] }, // sulla soglia, sguardo verso l'abitacolo
+      { p: 0.90, pos: [cx - 0.62, cy + 0.31, cz - 0.28],        tgt: [cx + 0.26, cy + 0.07, cz - 0.45] }, // dentro, verso il volante
+      { p: 1.00, pos: [cx - 0.46, cy + 0.265, cz - 0.40],       tgt: [cx + 0.30, cy + 0.055, cz - 0.46] }, // COCKPIT: volante con stemma Porsche + quadro Turbo S
     ];
     built.current = true;
   };
@@ -155,7 +158,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
     camera.position.set(pos[0], pos[1], pos[2]);
     camera.lookAt(tgt[0], tgt[1], tgt[2]);
     // luce d'abitacolo: si accende nell'ingresso per illuminare il volante
-    if (cabinLight.current) { cabinLight.current.position.set(wpos.current.x, wpos.current.y + 0.2, wpos.current.z); cabinLight.current.intensity = 3.2 * ss(0.78, 0.98, p); }
+    if (cabinLight.current) { cabinLight.current.position.copy(lightPos.current); cabinLight.current.intensity = 3.4 * ss(0.72, 0.95, p); }
     // UN SOLO giro completo su sé stessa (pivot centrato), 0.05 -> 0.55
     if (spin.current) spin.current.rotation.y = -Math.PI * 2 * ss(0.05, 0.55, p);
   });
@@ -245,7 +248,7 @@ export default function CinemaIntro() {
       if (w1.current) { const a = ss(0.20, 0.34, p); w1.current.style.opacity = String(a * (1 - out)); w1.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       if (w2.current) { const a = ss(0.28, 0.42, p); w2.current.style.opacity = String(a * (1 - out)); w2.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       // finale: dopo l'ingresso in abitacolo lo schermo sfuma nel NERO, poi compare il sito
-      if (endBlack.current) endBlack.current.style.opacity = String(ss(0.93, 1.0, p));
+      if (endBlack.current) endBlack.current.style.opacity = String(ss(0.965, 1.0, p));
       if (cue.current) cue.current.style.opacity = String((1 - ss(0.02, 0.1, p)) * (ready ? 1 : 0));
       if (bar.current) bar.current.style.width = p * 100 + "%";
       // header e menu compaiono solo a intro conclusa

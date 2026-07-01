@@ -68,7 +68,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="wrap">
           <div className="foot-grid">
             <div className="foot-brand">
-              <Link to="/" className="brand"><img className="logo-mark" src="/img/mark.png" alt="Inside Mobility" /><span>Inside Mobility<small>Automotive Concierge</small></span></Link>
+              <Link to="/" className="brand brand-horiz" aria-label="Inside Mobility — home"><img className="logo-horiz" src="/img/LOGO%20ORIZZ%20HEADER.webp" alt="Inside Mobility" /></Link>
               <p>Il servizio che trova e ti consegna l'auto perfetta. Dall'idea alla guida.</p>
               <div className="socials">
                 <a href="https://www.instagram.com/insidemobility/" target="_blank" rel="noopener" aria-label="Instagram"><Icon name="ig" /></a>

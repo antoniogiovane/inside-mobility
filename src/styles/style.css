@@ -245,6 +245,12 @@ body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);poi
 /* Loghi brand (SVG/WebP) a COLORI ORIGINALI, su striscia chiara per la massima leggibilità */
 .marquee-track img{height:clamp(30px,3.4vw,46px);width:auto;object-fit:contain;opacity:1;transition:transform .3s;filter:none}
 .marquee-track img:hover{transform:scale(1.08)}
+/* Loghi con versione dedicata al tema (es. Mercedes/Renault bianchi in dark) */
+.brand-swap{display:inline-flex;align-items:center}
+.brand-swap .bl-light{display:none}
+.brand-swap .bl-dark{display:block}
+[data-theme="light"] .brand-swap .bl-light{display:block}
+[data-theme="light"] .brand-swap .bl-dark{display:none}
 
 /* PRIMA SCHERMATA del sito: nera, con l'auto (telo) + testo. Compare dal nero a fine intro. */
 .intro-hero{background:#000;min-height:100svh;display:grid;place-items:center;padding:calc(var(--nav-h) + 2rem) 1.4rem 3rem;position:relative;color:#eaf0fb;border-bottom:1px solid rgba(255,255,255,.08)}

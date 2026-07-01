@@ -19,7 +19,8 @@ class GLBBoundary extends React.Component<{ fallback: ReactNode; children: React
   render() { return this.state.err ? this.props.fallback : this.props.children; }
 }
 
-type ReadyCb = (root: THREE.Object3D, door: THREE.Object3D | null, mixer: THREE.AnimationMixer | null, action: THREE.AnimationAction | null) => void;
+type ReadyCb = (root: THREE.Object3D, door: THREE.Object3D | null, mixer: THREE.AnimationMixer | null, action: THREE.AnimationAction | null, wheel: THREE.Object3D | null) => void;
+const WHEEL_RE = /steering|volante/i;
 
 /* ---------- Modello GLB reale ---------- */
 function CarGLB({ onReady }: { onReady: ReadyCb }) {
@@ -42,13 +43,19 @@ function CarGLB({ onReady }: { onReady: ReadyCb }) {
     if (door) console.log("[Inside Mobility] Sportello trovato:", (door as THREE.Object3D).name);
     else console.log("[Inside Mobility] Nessuno sportello separato: uso il finale con ingresso camera.");
 
+    // volante (per lo zoom finale e per capire il lato guida)
+    let wheel: THREE.Object3D | null = null;
+    scene.traverse((o: THREE.Object3D) => { if (!wheel && o.name && WHEEL_RE.test(o.name)) wheel = o; });
+    if (wheel) console.log("[Inside Mobility] Volante trovato:", (wheel as THREE.Object3D).name);
+    else console.log("[Inside Mobility] Volante non trovato: uso una posizione stimata.");
+
     let mixer: THREE.AnimationMixer | null = null, action: THREE.AnimationAction | null = null;
     if (CAR_CONFIG.hasDoorAnimationClip && gltf.animations?.length) {
       mixer = new THREE.AnimationMixer(scene);
       const clip = THREE.AnimationClip.findByName(gltf.animations, CAR_CONFIG.doorAnimationClipName) || gltf.animations[0];
       if (clip) { action = mixer.clipAction(clip); action.play(); action.paused = true; }
     }
-    onReady(scene, door, mixer, action);
+    onReady(scene, door, mixer, action, wheel);
   }, [scene]);
   return <primitive object={scene} position={[0, CAR_CONFIG.yOffset, 0]} scale={CAR_CONFIG.scale} />;
 }
@@ -57,7 +64,7 @@ function CarGLB({ onReady }: { onReady: ReadyCb }) {
 function FallbackCar({ onReady }: { onReady: ReadyCb }) {
   const g = useRef<THREE.Group>(null);
   const door = useRef<THREE.Group>(null);
-  useEffect(() => { if (g.current) onReady(g.current, door.current, null, null); }, []);
+  useEffect(() => { if (g.current) onReady(g.current, door.current, null, null, null); }, []);
   const paint = { color: "#1f6ff2", metalness: 0.7, roughness: 0.28 } as any;
   const glass = { color: "#0f1c30", metalness: 0.4, roughness: 0.1 } as any;
   const wheel = (x: number, z: number) => (
@@ -78,70 +85,77 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
   );
 }
 
-/* ---------- Regia: camera pilotata dallo scroll ----------
-   0.00–0.50  UN SOLO giro completo (360°) dell'auto, sportello sempre CHIUSO
+/* ---------- Regia agganciata al modello reale (coordinate MONDO) ----------
+   0.00–0.50  UN SOLO giro completo (360°), sportello sempre CHIUSO
    0.50–0.66  a giro finito lo sportello si apre
-   0.66–0.93  la camera va sul lato e ENTRA nell'abitacolo (volante, interni)
-   0.93–1.00  seduti dentro -> sfumatura al nero -> parte il sito
-   I keyframe sono FRAZIONI delle dimensioni reali dell'auto rispetto al suo centro:
-   x = lato (negativo = lato d'ingresso), y = altezza, z = avanti(+)/dietro(-). Muso = +z. */
-const KF = [
-  { p: 0.00, pos: [0.00, 0.55, 2.70], tgt: [0.00, 0.28, 0.00] },     // lontano, auto piccola
-  { p: 0.45, pos: [0.00, 0.48, 1.55], tgt: [0.00, 0.32, 0.00] },     // avvicinamento durante il giro
-  { p: 0.64, pos: [-1.90, 0.32, -0.30], tgt: [-0.20, 0.28, -0.35] }, // sul lato guida, allo sportello (verso il muso)
-  { p: 0.82, pos: [-0.72, 0.25, -0.26], tgt: [-0.08, 0.20, -0.45] }, // sulla soglia, sguardo verso l'interno
-  { p: 0.93, pos: [-0.18, 0.26, -0.16], tgt: [-0.12, 0.15, -0.55] }, // seduti al posto guida, sguardo avanti
-  { p: 1.00, pos: [-0.14, 0.20, -0.30], tgt: [-0.12, 0.12, -0.60] }, // ZOOM sul volante (stemma Porsche)
-];
-function sampleKF(key: "pos" | "tgt", p: number) {
-  if (p <= KF[0].p) return KF[0][key];
-  for (let i = 0; i < KF.length - 1; i++) {
-    const a = KF[i], b = KF[i + 1];
-    if (p <= b.p) { const t = ss(a.p, b.p, p); return (a[key] as number[]).map((v, j) => v + ((b[key] as number[])[j] - v) * t); }
+   0.64       la camera è di LATO: profilo dell'auto con lo sportello aperto
+   0.82–0.93  la camera passa dallo sportello ed ENTRA nell'abitacolo
+   0.93–1.00  ZOOM finale sullo stemma Porsche del VOLANTE -> nero -> sito
+   I keyframe sono calcolati da: centro/misure (bounding box) e posizione del volante. */
+type Key = { p: number; pos: number[]; tgt: number[] };
+function sampleKeys(keys: Key[], key: "pos" | "tgt", p: number) {
+  if (!keys.length) return [0, 0, 0];
+  if (p <= keys[0].p) return keys[0][key];
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i], b = keys[i + 1];
+    if (p <= b.p) { const t = ss(a.p, b.p, p); return a[key].map((v, j) => v + (b[key][j] - v) * t); }
   }
-  return KF[KF.length - 1][key];
+  return keys[keys.length - 1][key];
 }
 
 function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>; mobile: boolean }) {
   const root = useRef<THREE.Object3D | null>(null);
   const door = useRef<THREE.Object3D | null>(null);
+  const wheel = useRef<THREE.Object3D | null>(null);
   const doorBase = useRef(0);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const action = useRef<THREE.AnimationAction | null>(null);
-  const mirror = useRef(CAR_CONFIG.entrySide === "right" ? -1 : 1); // lato d'ingresso (-X canonico = "left")
-  const sideDone = useRef(false);
-  const tmp = useRef(new THREE.Vector3());
   const center = useRef(new THREE.Vector3(0, 0.6, 0));
   const size = useRef(new THREE.Vector3(1.9, 1.3, 4.5));
-  const measured = useRef(false);
+  const wpos = useRef(new THREE.Vector3(-0.35, 0.75, -0.9));
+  const keys = useRef<Key[]>([]);
+  const built = useRef(false);
+  const cabinLight = useRef<THREE.PointLight>(null);
 
-  const measure = () => {
+  const build = () => {
     if (!root.current) return;
+    root.current.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(root.current);
     box.getCenter(center.current); box.getSize(size.current);
-    measured.current = true;
+    const c = center.current, s = size.current, w = wpos.current;
+    if (wheel.current) { wheel.current.updateWorldMatrix(true, false); wheel.current.getWorldPosition(w); }
+    else {
+      const sgn = CAR_CONFIG.entrySide === "right" ? 1 : -1;
+      w.set(c.x + sgn * 0.18 * s.x, c.y + 0.10 * s.y, c.z - 0.28 * s.z);
+    }
+    const side = Math.abs(w.x - c.x) > 0.01 ? Math.sign(w.x - c.x) : (CAR_CONFIG.entrySide === "right" ? 1 : -1);
+    const Uz = Math.sign(c.z - w.z) || 1; // dal volante verso il sedile/abitacolo
+    keys.current = [
+      { p: 0.00, pos: [c.x, c.y + 0.45 * s.y, c.z + 2.55 * s.z], tgt: [c.x, c.y + 0.18 * s.y, c.z] },
+      { p: 0.45, pos: [c.x, c.y + 0.40 * s.y, c.z + 1.45 * s.z], tgt: [c.x, c.y + 0.22 * s.y, c.z] },
+      { p: 0.64, pos: [c.x + side * 2.35 * s.x, c.y + 0.10 * s.y, c.z], tgt: [c.x, c.y + 0.05 * s.y, c.z] },
+      { p: 0.82, pos: [c.x + side * 1.05 * s.x, c.y + 0.06 * s.y, w.z + Uz * 0.34 * s.z], tgt: [w.x, w.y + 0.02 * s.y, w.z] },
+      { p: 0.93, pos: [w.x + side * 0.06 * s.x, w.y + 0.16 * s.y, w.z + Uz * 0.30 * s.z], tgt: [w.x, w.y, w.z] },
+      { p: 1.00, pos: [w.x + side * 0.02 * s.x, w.y + 0.07 * s.y, w.z + Uz * 0.11 * s.z], tgt: [w.x, w.y, w.z] },
+    ];
+    built.current = true;
   };
 
-  const onReady: ReadyCb = (r, d, m, a) => {
-    root.current = r; door.current = d; mixer.current = m; action.current = a;
+  const onReady: ReadyCb = (r, d, m, a, wh) => {
+    root.current = r; door.current = d; mixer.current = m; action.current = a; wheel.current = wh;
     if (d) doorBase.current = (d.rotation as any)[CAR_CONFIG.doorHingeAxis];
-    measure();
+    build();
   };
 
   useFrame(({ camera }) => {
     const p = progress.current;
-    if (!measured.current) measure();
-    // lato dello sportello (se è un nodo separato) -> specchia il percorso
-    if (!sideDone.current && door.current) {
-      door.current.getWorldPosition(tmp.current);
-      const dx = tmp.current.x - center.current.x;
-      if (Math.abs(dx) > 0.05) { mirror.current = dx > 0 ? -1 : 1; sideDone.current = true; }
-    }
-    const m = mirror.current, c = center.current, s = size.current;
-    const rp = sampleKF("pos", p) as number[];
-    const rt = sampleKF("tgt", p) as number[];
-    camera.position.set(c.x + rp[0] * s.x * m, c.y + rp[1] * s.y, c.z + rp[2] * s.z);
-    camera.lookAt(c.x + rt[0] * s.x * m, c.y + rt[1] * s.y, c.z + rt[2] * s.z);
+    if (!built.current) build();
+    const pos = sampleKeys(keys.current, "pos", p) as number[];
+    const tgt = sampleKeys(keys.current, "tgt", p) as number[];
+    camera.position.set(pos[0], pos[1], pos[2]);
+    camera.lookAt(tgt[0], tgt[1], tgt[2]);
+    // luce d'abitacolo: si accende nell'ingresso per illuminare il volante
+    if (cabinLight.current) { cabinLight.current.position.set(wpos.current.x, wpos.current.y + 0.18, wpos.current.z); cabinLight.current.intensity = 3 * ss(0.78, 0.98, p); }
     // UN SOLO giro completo (360°), sportello CHIUSO durante il giro (0.05 -> 0.50)
     if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.05, 0.50, p);
     // SPORTELLO: si apre a giro finito (0.50 -> 0.66), prima dell'ingresso
@@ -159,6 +173,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
       <ambientLight intensity={0.4} />
       <spotLight position={[6, 8, 4]} angle={0.5} penumbra={1} intensity={2.2} castShadow={!mobile} shadow-bias={-0.0002} />
       <spotLight position={[-6, 5, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#5b9dff" />
+      <pointLight ref={cabinLight} distance={2.8} decay={2} color="#ffffff" intensity={0} />
       <Environment resolution={mobile ? 128 : 256}>
         <Lightformer intensity={2.4} position={[0, 4, -6]} scale={[12, 5, 1]} />
         <Lightformer intensity={1.2} position={[-5, 2, 2]} scale={[6, 6, 1]} color="#9cc4ff" />

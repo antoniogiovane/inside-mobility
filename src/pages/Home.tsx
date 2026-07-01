@@ -3,16 +3,27 @@ import { Link } from "react-router-dom";
 import CinemaIntro from "../components/intro/CinemaIntro";
 import Icon from "../components/Icon";
 
-// Loghi brand: carica i file in public/img/brands/  (es. porsche.svg oppure porsche.webp)
-const BRANDS = ["porsche", "audi", "mercedes-benz", "bmw", "maserati", "ferrari", "lamborghini", "range-rover", "alfa-romeo", "bentley"];
+// Loghi brand: nomi file ESATTI presenti in public/img/
+const BRANDS: { name: string; file: string }[] = [
+  { name: "Porsche", file: "Logo_della_Porsche.svg.webp" },
+  { name: "Audi", file: "Audi_logo_detail.svg.webp" },
+  { name: "Mercedes-Benz", file: "Mercedes-Benz_Logo_2010.svg" },
+  { name: "BMW", file: "BMW.svg" },
+  { name: "Maserati", file: "Logo_della_Maserati.svg.webp" },
+  { name: "Ferrari", file: "Logo_della_Scuderia_Ferrari_(vecchio).svg.webp" },
+  { name: "Lamborghini", file: "Logo_della_Lamborghini.svg.webp" },
+  { name: "Alfa Romeo", file: "Alfa_Romeo_2015.svg.webp" },
+  { name: "Volkswagen", file: "Volkswagen_logo_2019.svg.webp" },
+  { name: "Renault", file: "Renault_2021_Text.svg" },
+];
 
-// Prova prima .svg, poi .webp; se il file non esiste il logo viene semplicemente omesso.
-function BrandLogo({ slug }: { slug: string }) {
-  const [ext, setExt] = useState<"svg" | "webp" | "none">("svg");
-  if (ext === "none") return null;
+// Se un file non esiste, il logo viene semplicemente omesso (nessun errore).
+function BrandLogo({ name, file }: { name: string; file: string }) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
   return (
-    <img className="brand-logo" src={`/img/brands/${slug}.${ext}`} alt={slug.replace(/-/g, " ")}
-      loading="lazy" onError={() => setExt(ext === "svg" ? "webp" : "none")} />
+    <img className="brand-logo" src={`/img/${encodeURI(file)}`} alt={name}
+      loading="lazy" onError={() => setHidden(true)} />
   );
 }
 const CHECK = [
@@ -31,7 +42,7 @@ export default function Home() {
 
       <div className="marquee" aria-hidden="true">
         <div className="marquee-track">
-          {[...BRANDS, ...BRANDS].map((b, i) => <BrandLogo key={i} slug={b} />)}
+          {[...BRANDS, ...BRANDS].map((b, i) => <BrandLogo key={i} name={b.name} file={b.file} />)}
         </div>
       </div>
 

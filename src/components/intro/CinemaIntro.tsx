@@ -2,7 +2,6 @@ import React, { Suspense, useEffect, useMemo, useRef, useState, ReactNode } from
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, ContactShadows, MeshReflectorMaterial, useGLTF, useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { Link } from "react-router-dom";
 import { CAR_CONFIG } from "./carConfig";
 import "../../styles/cinema3d.css";
 
@@ -110,7 +109,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
   const doorBase = useRef(0);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const action = useRef<THREE.AnimationAction | null>(null);
-  const mirror = useRef(1);        // lato d'ingresso (-X canonico); si specchia se lo sportello è a +X
+  const mirror = useRef(CAR_CONFIG.entrySide === "right" ? -1 : 1); // lato d'ingresso (-X canonico = "left")
   const sideDone = useRef(false);
   const tmp = useRef(new THREE.Vector3());
 
@@ -198,7 +197,7 @@ export default function CinemaIntro() {
   const logo = useRef<HTMLDivElement>(null);
   const w1 = useRef<HTMLSpanElement>(null);
   const w2 = useRef<HTMLSpanElement>(null);
-  const hero = useRef<HTMLDivElement>(null);
+  const endBlack = useRef<HTMLDivElement>(null);
   const cue = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
@@ -226,7 +225,8 @@ export default function CinemaIntro() {
       const out = ss(0.5, 0.62, p);
       if (w1.current) { const a = ss(0.20, 0.34, p); w1.current.style.opacity = String(a * (1 - out)); w1.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       if (w2.current) { const a = ss(0.28, 0.42, p); w2.current.style.opacity = String(a * (1 - out)); w2.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
-      if (hero.current) { const h = ss(0.72, 0.93, p); hero.current.style.opacity = String(h); hero.current.style.transform = `translate(-50%, ${20 * (1 - h)}px)`; hero.current.style.pointerEvents = h > 0.9 ? "auto" : "none"; }
+      // finale: dopo l'ingresso in abitacolo lo schermo sfuma nel NERO, poi compare il sito
+      if (endBlack.current) endBlack.current.style.opacity = String(ss(0.86, 1.0, p));
       if (cue.current) cue.current.style.opacity = String((1 - ss(0.02, 0.1, p)) * (ready ? 1 : 0));
       if (bar.current) bar.current.style.width = p * 100 + "%";
       // header e menu compaiono solo a intro conclusa
@@ -265,17 +265,11 @@ export default function CinemaIntro() {
             <span className="cw" ref={w1}>Trova l'auto</span>
             <span className="cw gold-text" ref={w2}>dei tuoi sogni.</span>
           </div>
-          <div className="c3d-hero in-pointer" ref={hero}>
-            <span className="pill"><span className="dot-live"></span> Servizio attivo su tutta Italia</span>
-            <p className="lead center">Non siamo una concessionaria. Siamo il servizio che trova <b>l'auto perfetta</b> per te — nuova, km 0 o usata, in acquisto, finanziamento, leasing o noleggio.</p>
-            <div className="hero-cta" style={{ justifyContent: "center" }}>
-              <Link to="/configuratore" className="btn btn-gold btn-lg">Configura la tua auto <span className="arrow">→</span></Link>
-              <Link to="/servizi" className="btn btn-ghost btn-lg">Scopri come funziona</Link>
-            </div>
-          </div>
           <div className="c3d-cue" ref={cue}><span>Scorri</span><i></i></div>
         </div>
         <div className="c3d-bar"><i ref={bar}></i></div>
+        {/* sfumatura finale al nero: si passa dall'abitacolo al buio, poi compare il sito */}
+        {!reduce && <div className="c3d-end" ref={endBlack}></div>}
 
         {!reduce && <BootScreen done={ready} />}
       </div>

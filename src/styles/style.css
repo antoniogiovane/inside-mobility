@@ -252,6 +252,13 @@ body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);poi
 [data-theme="light"] .brand-swap .bl-light{display:block}
 [data-theme="light"] .brand-swap .bl-dark{display:none}
 
+/* Mercedes e Renault: BIANCHI in dark mode, colori originali in light.
+   Aggancio via nome file: funziona anche col markup attuale (nessuna modifica a Home.tsx richiesta). */
+.marquee-track img[src*="Mercedes-Benz_Logo_2010"],
+.marquee-track img[src*="Renault_2021"]{filter:brightness(0) invert(1)}
+[data-theme="light"] .marquee-track img[src*="Mercedes-Benz_Logo_2010"],
+[data-theme="light"] .marquee-track img[src*="Renault_2021"]{filter:none}
+
 /* PRIMA SCHERMATA del sito: nera, con l'auto (telo) + testo. Compare dal nero a fine intro. */
 .intro-hero{background:#000;min-height:100svh;display:grid;place-items:center;padding:calc(var(--nav-h) + 2rem) 1.4rem 3rem;position:relative;color:#eaf0fb;border-bottom:1px solid rgba(255,255,255,.08)}
 .ih-inner{display:grid;gap:2.2rem;max-width:1160px;width:100%;align-items:center;text-align:center;justify-items:center}

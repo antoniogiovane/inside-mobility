@@ -9,8 +9,8 @@
 .c3d-logo img{width:112px;filter:drop-shadow(0 0 34px rgba(31,111,242,.55))}
 .c3d-logo span{font-family:var(--font-display);letter-spacing:.34em;font-weight:800;font-size:.85rem;color:#eaf0fb}
 
-.c3d-words{position:absolute;left:0;right:0;top:20%;text-align:center;font-family:var(--font-display);font-weight:800;line-height:1;letter-spacing:-.03em;font-size:clamp(2.2rem,7vw,5.2rem);display:grid;gap:.06em}
-.c3d-words .cw{display:block;opacity:0;transform:translateY(40px);will-change:opacity,transform}
+.c3d-words{position:absolute;left:0;right:0;top:18%;text-align:center;font-family:var(--font-display);font-weight:800;line-height:1.14;letter-spacing:-.03em;font-size:clamp(2.2rem,7vw,5.2rem);display:grid;gap:.04em;padding:0 1rem .18em}
+.c3d-words .cw{display:block;opacity:0;transform:translateY(40px);will-change:opacity,transform;padding-bottom:.06em}
 
 .c3d-hero{position:absolute;left:50%;bottom:12%;transform:translate(-50%,20px);width:min(92vw,660px);text-align:center;display:grid;justify-items:center;gap:1rem;opacity:0;will-change:opacity,transform}
 .c3d-hero .lead{margin-inline:auto}

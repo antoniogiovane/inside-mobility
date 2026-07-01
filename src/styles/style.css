@@ -246,15 +246,24 @@ body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);poi
 .marquee-track img{height:clamp(30px,3.4vw,46px);width:auto;object-fit:contain;opacity:1;transition:transform .3s;filter:none}
 .marquee-track img:hover{transform:scale(1.08)}
 
-/* Hero del sito: compare dal nero appena finita l'intro cinematografica (sempre su fondo scuro) */
-.intro-hero{background:var(--grad-dark);text-align:center;padding:clamp(4.5rem,12vh,9rem) 0 clamp(3rem,7vh,5rem);position:relative;border-bottom:1px solid rgba(255,255,255,.08);color:#eaf0fb}
-.intro-hero .wrap{display:grid;justify-items:center;gap:1.35rem;max-width:860px}
+/* PRIMA SCHERMATA del sito: nera, con l'auto (telo) + testo. Compare dal nero a fine intro. */
+.intro-hero{background:#000;min-height:100svh;display:grid;place-items:center;padding:calc(var(--nav-h) + 2rem) 1.4rem 3rem;position:relative;color:#eaf0fb;border-bottom:1px solid rgba(255,255,255,.08)}
+.ih-inner{display:grid;gap:2.2rem;max-width:1160px;width:100%;align-items:center;text-align:center;justify-items:center}
+.ih-copy{display:grid;gap:1.3rem;justify-items:center}
 .ih-title{font-family:var(--font-display);font-weight:800;letter-spacing:-.03em;line-height:1;font-size:clamp(2.6rem,7vw,5.4rem);color:#fff}
-.intro-hero .lead{max-width:660px;margin-inline:auto;color:rgba(234,240,251,.82)}
+.intro-hero .lead{max-width:600px;margin-inline:auto;color:rgba(234,240,251,.82)}
 .intro-hero .hero-cta{justify-content:center;flex-wrap:wrap}
-/* pulsante secondario leggibile sul nero, non solo in hover */
 .intro-hero .btn-ghost{border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.06)}
 .intro-hero .btn-ghost:hover{border-color:var(--brand-2);color:#fff;background:rgba(31,111,242,.2);transform:translateY(-3px)}
+.ih-visual{width:100%;display:flex;justify-content:center}
+.ih-car{width:min(90%,560px);height:auto;border-radius:16px;filter:drop-shadow(0 30px 60px rgba(0,0,0,.6))}
+@media(min-width:920px){
+  .ih-inner{grid-template-columns:1.05fr .95fr;text-align:left;justify-items:stretch;gap:3rem}
+  .ih-copy{justify-items:start}
+  .intro-hero .lead{margin-inline:0}
+  .intro-hero .hero-cta{justify-content:flex-start}
+  .ih-car{width:100%;max-width:600px}
+}
 @keyframes scrollx{to{transform:translateX(-50%)}}
 
 /* ---------- CARDS / GRID ---------- */

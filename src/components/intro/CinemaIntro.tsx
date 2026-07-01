@@ -86,12 +86,12 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
    I keyframe sono FRAZIONI delle dimensioni reali dell'auto rispetto al suo centro:
    x = lato (negativo = lato d'ingresso), y = altezza, z = avanti(+)/dietro(-). Muso = +z. */
 const KF = [
-  { p: 0.00, pos: [0.00, 0.55, 2.70], tgt: [0.00, 0.28, 0.00] },
-  { p: 0.45, pos: [0.00, 0.48, 1.55], tgt: [0.00, 0.32, 0.00] },
-  { p: 0.64, pos: [-1.85, 0.34, 0.10], tgt: [-0.25, 0.30, 0.00] },
-  { p: 0.82, pos: [-0.80, 0.26, -0.02], tgt: [-0.05, 0.26, 0.22] },
-  { p: 0.93, pos: [-0.17, 0.34, -0.12], tgt: [0.02, 0.15, 0.70] },
-  { p: 1.00, pos: [-0.15, 0.34, -0.14], tgt: [0.02, 0.14, 0.70] },
+  { p: 0.00, pos: [0.00, 0.55, 2.70], tgt: [0.00, 0.28, 0.00] },     // lontano, auto piccola
+  { p: 0.45, pos: [0.00, 0.48, 1.55], tgt: [0.00, 0.32, 0.00] },     // avvicinamento durante il giro
+  { p: 0.64, pos: [-1.90, 0.32, -0.30], tgt: [-0.20, 0.28, -0.35] }, // sul lato guida, allo sportello (verso il muso)
+  { p: 0.82, pos: [-0.72, 0.25, -0.26], tgt: [-0.08, 0.20, -0.45] }, // sulla soglia, sguardo verso l'interno
+  { p: 0.93, pos: [-0.18, 0.26, -0.16], tgt: [-0.12, 0.15, -0.55] }, // seduti al posto guida, sguardo avanti
+  { p: 1.00, pos: [-0.14, 0.20, -0.30], tgt: [-0.12, 0.12, -0.60] }, // ZOOM sul volante (stemma Porsche)
 ];
 function sampleKF(key: "pos" | "tgt", p: number) {
   if (p <= KF[0].p) return KF[0][key];

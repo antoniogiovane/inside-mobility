@@ -129,9 +129,11 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.06;let
 .nav{
   position:fixed;inset:0 0 auto 0;height:var(--nav-h);z-index:900;
   display:flex;align-items:center;
-  transition:background .4s var(--ease),border-color .4s,backdrop-filter .4s;
+  transition:background .4s var(--ease),border-color .4s,backdrop-filter .4s,transform .55s var(--ease),opacity .55s var(--ease);
   border-bottom:1px solid transparent;
 }
+/* Durante l'intro cinematografica header e menu restano nascosti (compaiono a intro conclusa) */
+body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);pointer-events:none}
 .nav.scrolled{
   background:var(--glass);backdrop-filter:blur(20px) saturate(140%);
   -webkit-backdrop-filter:blur(20px) saturate(140%);border-bottom-color:var(--line);
@@ -240,6 +242,10 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.06;let
 .marquee:hover .marquee-track{animation-play-state:paused}
 .marquee-track span{font-family:var(--font-display);font-weight:800;font-size:clamp(1.1rem,2.4vw,1.7rem);color:var(--muted-2);letter-spacing:.01em;white-space:nowrap;transition:color .3s}
 .marquee-track span:hover{color:var(--brand-2)}
+/* Loghi brand (SVG/WebP) — bianchi su tema scuro, neri su tema chiaro, sempre visibili */
+.marquee-track img{height:clamp(24px,3vw,34px);width:auto;object-fit:contain;opacity:.62;filter:brightness(0) invert(1);transition:opacity .3s}
+.marquee-track img:hover{opacity:1}
+[data-theme="light"] .marquee-track img{filter:brightness(0);opacity:.5}
 @keyframes scrollx{to{transform:translateX(-50%)}}
 
 /* ---------- CARDS / GRID ---------- */

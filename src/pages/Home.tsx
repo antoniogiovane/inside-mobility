@@ -4,23 +4,33 @@ import CinemaIntro from "../components/intro/CinemaIntro";
 import Icon from "../components/Icon";
 
 // Loghi brand: nomi file ESATTI presenti in public/img/
-const BRANDS: { name: string; file: string }[] = [
+// fileDark = versione da mostrare SOLO in dark mode (es. logo bianco). Se assente, si usa "file" ovunque.
+const BRANDS: { name: string; file: string; fileDark?: string }[] = [
   { name: "Porsche", file: "Logo_della_Porsche.svg.webp" },
   { name: "Audi", file: "Audi_logo_detail.svg.webp" },
-  { name: "Mercedes-Benz", file: "Mercedes-Benz_Logo_2010.svg" },
+  { name: "Mercedes-Benz", file: "Mercedes-Benz_Logo_2010.svg", fileDark: "MERCEDES WHITE.webp" },
   { name: "BMW", file: "BMW.svg" },
   { name: "Maserati", file: "Logo_della_Maserati.svg.webp" },
   { name: "Ferrari", file: "Logo_della_Scuderia_Ferrari_(vecchio).svg.webp" },
   { name: "Lamborghini", file: "Logo_della_Lamborghini.svg.webp" },
   { name: "Alfa Romeo", file: "Alfa_Romeo_2015.svg.webp" },
   { name: "Volkswagen", file: "Volkswagen_logo_2019.svg.webp" },
-  { name: "Renault", file: "Renault_2021_Text.svg" },
+  { name: "Renault", file: "Renault_2021_Text.svg", fileDark: "RENAULT WHITE.webp" },
 ];
 
 // Se un file non esiste, il logo viene semplicemente omesso (nessun errore).
-function BrandLogo({ name, file }: { name: string; file: string }) {
+function BrandLogo({ name, file, fileDark }: { name: string; file: string; fileDark?: string }) {
   const [hidden, setHidden] = useState(false);
   if (hidden) return null;
+  if (fileDark) {
+    // due immagini sovrapposte: la giusta viene mostrata dal CSS in base al tema
+    return (
+      <span className="brand-swap">
+        <img className="brand-logo bl-light" src={`/img/${encodeURI(file)}`} alt={name} loading="lazy" />
+        <img className="brand-logo bl-dark" src={`/img/${encodeURI(fileDark)}`} alt={name} loading="lazy" />
+      </span>
+    );
+  }
   return (
     <img className="brand-logo" src={`/img/${encodeURI(file)}`} alt={name}
       loading="lazy" onError={() => setHidden(true)} />

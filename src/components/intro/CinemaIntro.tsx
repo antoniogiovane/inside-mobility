@@ -85,12 +85,15 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
    0.60  verso fine rotazione si APRE lo sportello lato guida
    0.85  la camera si avvicina allo sportello aperto
    1.00  ingresso in abitacolo, immersione e zoom finale -> parte il sito */
+// Nota: la coordinata X viene "specchiata" a runtime sul lato dove si trova
+// davvero lo sportello guidatore (rilevato dal modello). Qui il lato canonico è -X.
 const CAM = [
-  { p: 0.00, pos: [0, 1.5, 10.6], tgt: [0, 0.95, 0] },
-  { p: 0.50, pos: [0, 1.42, 6.2], tgt: [0, 1.0, 0] },
-  { p: 0.72, pos: [2.4, 1.32, 4.0], tgt: [0.15, 1.05, 0] },
-  { p: 0.88, pos: [1.25, 1.2, 1.8], tgt: [0.22, 1.08, -0.25] },
-  { p: 1.00, pos: [0.22, 1.15, 0.10], tgt: [0.1, 1.12, -4] },
+  { p: 0.00, pos: [0, 1.5, 10.6], tgt: [0, 0.95, 0] },      // lontano, muso, auto piccola
+  { p: 0.45, pos: [0, 1.5, 7.0], tgt: [0, 1.05, 0] },        // avvicinamento mentre l'auto compie il giro
+  { p: 0.62, pos: [-5.0, 1.5, 0.9], tgt: [0, 1.05, 0] },     // arrivo sul lato guida (sportello che si apre)
+  { p: 0.80, pos: [-2.3, 1.25, 0.25], tgt: [-0.3, 1.1, 0.8] },// vicino allo sportello aperto, sguardo verso l'interno
+  { p: 0.92, pos: [-1.05, 1.16, -0.05], tgt: [0, 1.1, 2.8] }, // sulla soglia, si entra
+  { p: 1.00, pos: [-0.35, 1.14, -0.25], tgt: [0, 1.08, 6] },  // seduti dentro, sguardo in avanti (parabrezza)
 ];
 function sample(key: "pos" | "tgt", p: number) {
   if (p <= CAM[0].p) return CAM[0][key];
@@ -107,6 +110,9 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
   const doorBase = useRef(0);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const action = useRef<THREE.AnimationAction | null>(null);
+  const mirror = useRef(1);        // lato d'ingresso (-X canonico); si specchia se lo sportello è a +X
+  const sideDone = useRef(false);
+  const tmp = useRef(new THREE.Vector3());
 
   const onReady: ReadyCb = (r, d, m, a) => {
     root.current = r; door.current = d; mixer.current = m; action.current = a;
@@ -115,14 +121,20 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
 
   useFrame(({ camera }) => {
     const p = progress.current;
+    // rileva su quale lato è lo sportello e specchia il percorso camera di conseguenza
+    if (!sideDone.current && door.current) {
+      door.current.getWorldPosition(tmp.current);
+      if (Math.abs(tmp.current.x) > 0.05) { mirror.current = tmp.current.x > 0 ? -1 : 1; sideDone.current = true; }
+    }
+    const m = mirror.current;
     const pos = sample("pos", p) as number[];
     const tgt = sample("tgt", p) as number[];
-    camera.position.set(pos[0], pos[1], pos[2]);
-    camera.lookAt(tgt[0], tgt[1], tgt[2]);
-    // ROTAZIONE COMPLETA dell'auto su se stessa (giro di 360°) tra 0.08 e 0.66
-    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.08, 0.66, p);
-    // SPORTELLO: resta CHIUSO durante il giro, poi si apre verso la fine (0.60 -> 0.80)
-    const open = ss(0.60, 0.80, p);
+    camera.position.set(pos[0] * m, pos[1], pos[2]);
+    camera.lookAt(tgt[0] * m, tgt[1], tgt[2]);
+    // ROTAZIONE COMPLETA dell'auto su se stessa (giro di 360°) tra 0.06 e 0.55
+    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.06, 0.55, p);
+    // SPORTELLO: resta CHIUSO durante il giro, poi si apre (0.52 -> 0.74) prima dell'ingresso
+    const open = ss(0.52, 0.74, p);
     if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
       const dur = action.current.getClip().duration || 1;
       action.current.time = dur * open; mixer.current.update(0);

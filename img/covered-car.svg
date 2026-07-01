@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 400">
+<defs>
+<linearGradient id="cloth" x1="0" y1="0" x2="0" y2="1">
+ <stop offset="0" stop-color="#243247"/><stop offset="0.5" stop-color="#151c29"/><stop offset="1" stop-color="#0b111b"/>
+</linearGradient>
+<radialGradient id="spot" cx="0.5" cy="0.25" r="0.75">
+ <stop offset="0" stop-color="rgba(91,157,255,.28)"/><stop offset="1" stop-color="rgba(91,157,255,0)"/>
+</radialGradient>
+<linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+ <stop offset="0" stop-color="rgba(255,255,255,.22)"/><stop offset="1" stop-color="rgba(255,255,255,0)"/>
+</linearGradient>
+</defs>
+<ellipse cx="410" cy="360" rx="330" ry="26" fill="rgba(0,0,0,.5)"/>
+<rect x="0" y="0" width="820" height="400" fill="url(#spot)"/>
+<!-- telo -->
+<path d="M70,360
+ C64,320 78,300 120,300
+ C150,300 150,286 168,270
+ C210,232 250,214 340,210
+ C470,206 520,224 560,250
+ C596,272 650,286 700,292
+ C748,298 762,322 758,360 Z"
+ fill="url(#cloth)" stroke="#2c3a52" stroke-width="1.5"/>
+<!-- sheen sulla cima -->
+<path d="M175,268 C215,232 255,215 340,211 C430,208 490,222 540,246 C470,236 380,238 300,258 C255,268 210,270 175,268 Z" fill="url(#sheen)" opacity=".7"/>
+<!-- pieghe -->
+<path d="M120,300 C150,312 150,340 150,360" fill="none" stroke="#0a0f18" stroke-width="3" opacity=".5"/>
+<path d="M560,252 C574,290 574,330 566,360" fill="none" stroke="#0a0f18" stroke-width="3" opacity=".5"/>
+<path d="M340,212 C346,260 344,320 344,360" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="2"/>
+<!-- ruote accennate -->
+<path d="M150,360 a58,44 0 0 1 116,0 Z" fill="#05080e"/>
+<path d="M470,360 a58,44 0 0 1 116,0 Z" fill="#05080e"/>
+</svg>

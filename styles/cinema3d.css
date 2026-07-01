@@ -1,0 +1,40 @@
+/* Intro 3D scroll-driven */
+.c3d{position:relative;height:460vh;background:#04060c}
+.c3d-stage{position:sticky;top:0;height:100svh;overflow:hidden;background:radial-gradient(120% 90% at 50% 34%,#0d1730 0%,#070b16 55%,#03040a 100%)}
+.c3d-canvas{position:absolute;inset:0;z-index:1}
+.c3d-overlay{position:absolute;inset:0;z-index:2;pointer-events:none}
+.c3d-overlay .in-pointer{pointer-events:auto}
+
+.c3d-logo{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:grid;justify-items:center;gap:1.1rem;will-change:opacity,transform}
+.c3d-logo img{width:112px;filter:drop-shadow(0 0 34px rgba(31,111,242,.55))}
+.c3d-logo span{font-family:var(--font-display);letter-spacing:.34em;font-weight:800;font-size:.85rem;color:#eaf0fb}
+
+.c3d-words{position:absolute;left:0;right:0;top:20%;text-align:center;font-family:var(--font-display);font-weight:800;line-height:1;letter-spacing:-.03em;font-size:clamp(2.2rem,7vw,5.2rem);display:grid;gap:.06em}
+.c3d-words .cw{display:block;opacity:0;transform:translateY(40px);will-change:opacity,transform}
+
+.c3d-hero{position:absolute;left:50%;bottom:12%;transform:translate(-50%,20px);width:min(92vw,660px);text-align:center;display:grid;justify-items:center;gap:1rem;opacity:0;will-change:opacity,transform}
+.c3d-hero .lead{margin-inline:auto}
+
+.c3d-cue{position:absolute;left:0;right:0;bottom:24px;display:grid;justify-items:center;gap:.5rem;color:var(--muted);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase}
+.c3d-cue i{width:22px;height:34px;border:2px solid var(--line-strong);border-radius:12px;position:relative}
+.c3d-cue i::after{content:"";position:absolute;left:50%;top:6px;width:3px;height:7px;border-radius:2px;background:var(--brand-2);transform:translateX(-50%);animation:cueDot 1.6s infinite}
+
+.c3d-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.05);z-index:3}
+.c3d-bar i{display:block;height:100%;width:0;background:var(--grad-brand)}
+
+.c3d-loader{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.85rem;z-index:4}
+.c3d-loader img{width:80px;opacity:.9;animation:introBlink 1.1s ease-in-out infinite}
+@keyframes introBlink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* fallback reduced-motion: mostra hero statico, niente 3D */
+.c3d.no-3d{height:100svh}
+.c3d.no-3d .c3d-canvas,.c3d.no-3d .c3d-logo,.c3d.no-3d .c3d-words,.c3d.no-3d .c3d-cue,.c3d.no-3d .c3d-bar{display:none}
+.c3d.no-3d .c3d-hero{position:relative;left:auto;bottom:auto;transform:none;opacity:1;margin:0 auto;padding-top:calc(var(--nav-h) + 8vh)}
+
+/* mobile: intro più corta e leggera */
+@media(max-width:768px){
+  .c3d{height:300vh}
+  .c3d-words{top:16%}
+  .c3d-hero{bottom:8%;width:92vw}
+  .c3d-logo img{width:90px}
+}

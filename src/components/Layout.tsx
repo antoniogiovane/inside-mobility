@@ -81,8 +81,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div><h5>Contatti</h5><a href={"mailto:" + IM.email}>{IM.email}</a><a href={"tel:" + IM.tel}>{IM.phone}</a><Link to="/contatti">Richiedi una consulenza</Link></div>
           </div>
           <div className="foot-bottom">
-            <span>© {new Date().getFullYear()} Inside Mobility di Alessio Alushaj — P.IVA {IM.piva}</span>
-            <span>Design & sviluppo su misura</span>
+            <span>© {new Date().getFullYear()} Inside Mobility</span>
+            <span>Design e sviluppo su misura by <a href="https://agylax.com" target="_blank" rel="noopener">Agylax</a></span>
           </div>
         </div>
       </footer>

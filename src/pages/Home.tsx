@@ -1,8 +1,20 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import CinemaIntro from "../components/intro/CinemaIntro";
 import Icon from "../components/Icon";
 
-const BRANDS = ["Mercedes-Benz", "BMW", "Audi", "Porsche", "Range Rover", "Tesla", "Volkswagen", "Alfa Romeo", "Lamborghini", "Ferrari"];
+// Loghi brand: carica i file in public/img/brands/  (es. porsche.svg oppure porsche.webp)
+const BRANDS = ["porsche", "audi", "mercedes-benz", "bmw", "maserati", "ferrari", "lamborghini", "range-rover", "alfa-romeo", "bentley"];
+
+// Prova prima .svg, poi .webp; se il file non esiste il logo viene semplicemente omesso.
+function BrandLogo({ slug }: { slug: string }) {
+  const [ext, setExt] = useState<"svg" | "webp" | "none">("svg");
+  if (ext === "none") return null;
+  return (
+    <img className="brand-logo" src={`/img/brands/${slug}.${ext}`} alt={slug.replace(/-/g, " ")}
+      loading="lazy" onError={() => setExt(ext === "svg" ? "webp" : "none")} />
+  );
+}
 const CHECK = [
   ["Meccanica & motore", "Motore, cambio, frizione, trasmissione, perdite e rumorosità."],
   ["Carrozzeria & telaio", "Verniciatura, pannelli, corrosione, congruità telaio, ex-sinistri."],
@@ -19,7 +31,7 @@ export default function Home() {
 
       <div className="marquee" aria-hidden="true">
         <div className="marquee-track">
-          {[...BRANDS, ...BRANDS].map((b, i) => <span key={i}>{b}</span>)}
+          {[...BRANDS, ...BRANDS].map((b, i) => <BrandLogo key={i} slug={b} />)}
         </div>
       </div>
 

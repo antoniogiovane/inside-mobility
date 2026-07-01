@@ -1,8 +1,41 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import CinemaIntro from "../components/intro/CinemaIntro";
 import Icon from "../components/Icon";
 
-const BRANDS = ["Mercedes-Benz", "BMW", "Audi", "Porsche", "Range Rover", "Tesla", "Volkswagen", "Alfa Romeo", "Lamborghini", "Ferrari"];
+// Loghi brand: nomi file ESATTI presenti in public/img/
+// fileDark = versione da mostrare SOLO in dark mode (es. logo bianco). Se assente, si usa "file" ovunque.
+const BRANDS: { name: string; file: string; fileDark?: string }[] = [
+  { name: "Porsche", file: "Logo_della_Porsche.svg.webp" },
+  { name: "Audi", file: "Audi_logo_detail.svg.webp" },
+  { name: "Mercedes-Benz", file: "Mercedes-Benz_Logo_2010.svg", fileDark: "MERCEDES WHITE.webp" },
+  { name: "BMW", file: "BMW.svg" },
+  { name: "Maserati", file: "Logo_della_Maserati.svg.webp" },
+  { name: "Ferrari", file: "Logo_della_Scuderia_Ferrari_(vecchio).svg.webp" },
+  { name: "Lamborghini", file: "Logo_della_Lamborghini.svg.webp" },
+  { name: "Alfa Romeo", file: "Alfa_Romeo_2015.svg.webp" },
+  { name: "Volkswagen", file: "Volkswagen_logo_2019.svg.webp" },
+  { name: "Renault", file: "Renault_2021_Text.svg", fileDark: "RENAULT WHITE.webp" },
+];
+
+// Se un file non esiste, il logo viene semplicemente omesso (nessun errore).
+function BrandLogo({ name, file, fileDark }: { name: string; file: string; fileDark?: string }) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  if (fileDark) {
+    // due immagini sovrapposte: la giusta viene mostrata dal CSS in base al tema
+    return (
+      <span className="brand-swap">
+        <img className="brand-logo bl-light" src={`/img/${encodeURI(file)}`} alt={name} loading="lazy" />
+        <img className="brand-logo bl-dark" src={`/img/${encodeURI(fileDark)}`} alt={name} loading="lazy" />
+      </span>
+    );
+  }
+  return (
+    <img className="brand-logo" src={`/img/${encodeURI(file)}`} alt={name}
+      loading="lazy" onError={() => setHidden(true)} />
+  );
+}
 const CHECK = [
   ["Meccanica & motore", "Motore, cambio, frizione, trasmissione, perdite e rumorosità."],
   ["Carrozzeria & telaio", "Verniciatura, pannelli, corrosione, congruità telaio, ex-sinistri."],
@@ -17,9 +50,26 @@ export default function Home() {
     <>
       <CinemaIntro />
 
+      <section className="intro-hero">
+        <div className="ih-inner" data-reveal>
+          <div className="ih-copy">
+            <span className="pill"><span className="dot-live"></span> Servizio attivo in tutta Italia</span>
+            <h1 className="ih-title">Dall'idea alla guida.</h1>
+            <p className="lead">Non siamo una concessionaria. Siamo il servizio che trova <b>l'auto perfetta</b> per te — nuova, km 0 o usata, in acquisto, finanziamento, leasing o noleggio.</p>
+            <div className="hero-cta">
+              <Link to="/configuratore" className="btn btn-gold btn-lg">Configura la tua auto <span className="arrow">→</span></Link>
+              <Link to="/servizi" className="btn btn-ghost btn-lg">Scopri come funziona</Link>
+            </div>
+          </div>
+          <div className="ih-visual">
+            <img className="ih-car" src="/img/AUTO%20IM.webp" alt="La tua prossima auto, in arrivo" />
+          </div>
+        </div>
+      </section>
+
       <div className="marquee" aria-hidden="true">
         <div className="marquee-track">
-          {[...BRANDS, ...BRANDS].map((b, i) => <span key={i}>{b}</span>)}
+          {[...BRANDS, ...BRANDS].map((b, i) => <BrandLogo key={i} name={b.name} file={b.file} />)}
         </div>
       </div>
 
@@ -56,7 +106,7 @@ export default function Home() {
               <Link to="/servizi" className="btn btn-ghost mt-2">Tutti i servizi <span className="arrow">→</span></Link>
             </div>
             <div className="feature-media" data-reveal data-reveal-delay="1">
-              <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1400&auto=format&fit=crop" alt="Dettaglio auto sportiva" loading="lazy" />
+              <img src="/img/personalizzazione%20inside%20mobilty.webp" alt="Personalizzazione e detailing Inside Mobility" loading="lazy" />
               <div className="badge-float"><img className="logo-mark" src="/img/mark.png" alt="Inside Mobility" /><div><b style={{ display: "block" }}>Detailing & personalizzazione</b><span className="muted" style={{ fontSize: ".85rem" }}>Ogni auto, un pezzo unico.</span></div></div>
             </div>
           </div>

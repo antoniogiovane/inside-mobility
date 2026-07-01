@@ -142,6 +142,10 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.06;let
   height:40px;width:auto;flex:none;display:block;object-fit:contain;
 }
 .brand small{display:block;font-family:var(--font-body);font-weight:600;font-size:.6rem;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-top:3px}
+/* Logo orizzontale nell'header */
+.brand-horiz{gap:0}
+.brand-horiz .logo-horiz{height:40px;width:auto;flex:none;display:block;object-fit:contain}
+@media(max-width:700px){.brand-horiz .logo-horiz{height:32px}}
 .nav-links{display:flex;align-items:center;gap:2.1rem}
 .nav-links a{font-size:.92rem;font-weight:600;color:var(--muted);position:relative;transition:color .3s}
 .nav-links a::after{content:"";position:absolute;left:0;bottom:-7px;height:2px;width:0;background:var(--grad-brand);transition:width .35s var(--ease)}

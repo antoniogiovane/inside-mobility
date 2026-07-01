@@ -35,9 +35,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     <>
       <nav className="nav" ref={navRef}>
         <div className="wrap">
-          <Link to="/" className="brand">
-            <img className="logo-mark" src="/img/mark.png" alt="Inside Mobility" />
-            <span>Inside Mobility<small>Automotive Concierge</small></span>
+          <Link to="/" className="brand brand-horiz" aria-label="Inside Mobility — home">
+            <img className="logo-horiz" src="/img/LOGO%20ORIZZ%20HEADER.webp" alt="Inside Mobility" />
           </Link>
           <div className="nav-links">
             {NAV.map((n) => (

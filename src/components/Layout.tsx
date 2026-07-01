@@ -82,7 +82,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="foot-bottom">
             <span>© {new Date().getFullYear()} Inside Mobility</span>
-            <span>Design e sviluppo su misura <span style={{ whiteSpace: "nowrap" }}>by <a href="https://agylax.com" target="_blank" rel="noopener">Agylax</a></span></span>
+            <span style={{ whiteSpace: "nowrap" }}>Design e sviluppo su misura da <a href="https://agylax.com" target="_blank" rel="noopener">Agylax</a></span>
           </div>
         </div>
       </footer>

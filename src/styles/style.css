@@ -245,6 +245,16 @@ body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);poi
 /* Loghi brand (SVG/WebP) a COLORI ORIGINALI, su striscia chiara per la massima leggibilità */
 .marquee-track img{height:clamp(30px,3.4vw,46px);width:auto;object-fit:contain;opacity:1;transition:transform .3s;filter:none}
 .marquee-track img:hover{transform:scale(1.08)}
+
+/* Hero del sito: compare dal nero appena finita l'intro cinematografica (sempre su fondo scuro) */
+.intro-hero{background:var(--grad-dark);text-align:center;padding:clamp(4.5rem,12vh,9rem) 0 clamp(3rem,7vh,5rem);position:relative;border-bottom:1px solid rgba(255,255,255,.08);color:#eaf0fb}
+.intro-hero .wrap{display:grid;justify-items:center;gap:1.35rem;max-width:860px}
+.ih-title{font-family:var(--font-display);font-weight:800;letter-spacing:-.03em;line-height:1;font-size:clamp(2.6rem,7vw,5.4rem);color:#fff}
+.intro-hero .lead{max-width:660px;margin-inline:auto;color:rgba(234,240,251,.82)}
+.intro-hero .hero-cta{justify-content:center;flex-wrap:wrap}
+/* pulsante secondario leggibile sul nero, non solo in hover */
+.intro-hero .btn-ghost{border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.06)}
+.intro-hero .btn-ghost:hover{border-color:var(--brand-2);color:#fff;background:rgba(31,111,242,.2);transform:translateY(-3px)}
 @keyframes scrollx{to{transform:translateX(-50%)}}
 
 /* ---------- CARDS / GRID ---------- */

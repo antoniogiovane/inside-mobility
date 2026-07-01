@@ -22,6 +22,9 @@
 .c3d-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.05);z-index:3}
 .c3d-bar i{display:block;height:100%;width:0;background:var(--grad-brand)}
 
+/* Sfumatura finale al nero (immersione nell'abitacolo -> buio -> sito) */
+.c3d-end{position:absolute;inset:0;z-index:5;background:#000;opacity:0;pointer-events:none}
+
 .c3d-loader{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.85rem;z-index:4}
 .c3d-loader img{width:80px;opacity:.9;animation:introBlink 1.1s ease-in-out infinite}
 @keyframes introBlink{0%,100%{opacity:1}50%{opacity:.22}}

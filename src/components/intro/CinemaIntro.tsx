@@ -79,28 +79,27 @@ function FallbackCar({ onReady }: { onReady: ReadyCb }) {
 }
 
 /* ---------- Regia: camera pilotata dallo scroll ----------
-   0.00  auto piccola e centrata, lontana (sportello CHIUSO)
-   ~     l'auto compie un GIRO COMPLETO su se stessa (rotazione 360°)
-   0.60  verso fine rotazione si APRE lo sportello lato guida
-   0.85  la camera si avvicina allo sportello aperto
-   1.00  ingresso in abitacolo, immersione e zoom finale -> parte il sito */
-// Nota: la coordinata X viene "specchiata" a runtime sul lato dove si trova
-// davvero lo sportello guidatore (rilevato dal modello). Qui il lato canonico è -X.
-const CAM = [
-  { p: 0.00, pos: [0, 1.5, 10.6], tgt: [0, 0.95, 0] },      // lontano, muso, auto piccola
-  { p: 0.45, pos: [0, 1.5, 7.0], tgt: [0, 1.05, 0] },        // avvicinamento mentre l'auto compie il giro
-  { p: 0.62, pos: [-5.0, 1.5, 0.9], tgt: [0, 1.05, 0] },     // arrivo sul lato guida (sportello che si apre)
-  { p: 0.80, pos: [-2.3, 1.25, 0.25], tgt: [-0.3, 1.1, 0.8] },// vicino allo sportello aperto, sguardo verso l'interno
-  { p: 0.92, pos: [-1.05, 1.16, -0.05], tgt: [0, 1.1, 2.8] }, // sulla soglia, si entra
-  { p: 1.00, pos: [-0.35, 1.14, -0.25], tgt: [0, 1.08, 6] },  // seduti dentro, sguardo in avanti (parabrezza)
+   0.00–0.50  UN SOLO giro completo (360°) dell'auto, sportello sempre CHIUSO
+   0.50–0.66  a giro finito lo sportello si apre
+   0.66–0.93  la camera va sul lato e ENTRA nell'abitacolo (volante, interni)
+   0.93–1.00  seduti dentro -> sfumatura al nero -> parte il sito
+   I keyframe sono FRAZIONI delle dimensioni reali dell'auto rispetto al suo centro:
+   x = lato (negativo = lato d'ingresso), y = altezza, z = avanti(+)/dietro(-). Muso = +z. */
+const KF = [
+  { p: 0.00, pos: [0.00, 0.55, 2.70], tgt: [0.00, 0.28, 0.00] },
+  { p: 0.45, pos: [0.00, 0.48, 1.55], tgt: [0.00, 0.32, 0.00] },
+  { p: 0.64, pos: [-1.85, 0.34, 0.10], tgt: [-0.25, 0.30, 0.00] },
+  { p: 0.82, pos: [-0.80, 0.26, -0.02], tgt: [-0.05, 0.26, 0.22] },
+  { p: 0.93, pos: [-0.17, 0.34, -0.12], tgt: [0.02, 0.15, 0.70] },
+  { p: 1.00, pos: [-0.15, 0.34, -0.14], tgt: [0.02, 0.14, 0.70] },
 ];
-function sample(key: "pos" | "tgt", p: number) {
-  if (p <= CAM[0].p) return CAM[0][key];
-  for (let i = 0; i < CAM.length - 1; i++) {
-    const a = CAM[i], b = CAM[i + 1];
+function sampleKF(key: "pos" | "tgt", p: number) {
+  if (p <= KF[0].p) return KF[0][key];
+  for (let i = 0; i < KF.length - 1; i++) {
+    const a = KF[i], b = KF[i + 1];
     if (p <= b.p) { const t = ss(a.p, b.p, p); return (a[key] as number[]).map((v, j) => v + ((b[key] as number[])[j] - v) * t); }
   }
-  return CAM[CAM.length - 1][key];
+  return KF[KF.length - 1][key];
 }
 
 function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>; mobile: boolean }) {
@@ -112,28 +111,41 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
   const mirror = useRef(CAR_CONFIG.entrySide === "right" ? -1 : 1); // lato d'ingresso (-X canonico = "left")
   const sideDone = useRef(false);
   const tmp = useRef(new THREE.Vector3());
+  const center = useRef(new THREE.Vector3(0, 0.6, 0));
+  const size = useRef(new THREE.Vector3(1.9, 1.3, 4.5));
+  const measured = useRef(false);
+
+  const measure = () => {
+    if (!root.current) return;
+    const box = new THREE.Box3().setFromObject(root.current);
+    box.getCenter(center.current); box.getSize(size.current);
+    measured.current = true;
+  };
 
   const onReady: ReadyCb = (r, d, m, a) => {
     root.current = r; door.current = d; mixer.current = m; action.current = a;
     if (d) doorBase.current = (d.rotation as any)[CAR_CONFIG.doorHingeAxis];
+    measure();
   };
 
   useFrame(({ camera }) => {
     const p = progress.current;
-    // rileva su quale lato è lo sportello e specchia il percorso camera di conseguenza
+    if (!measured.current) measure();
+    // lato dello sportello (se è un nodo separato) -> specchia il percorso
     if (!sideDone.current && door.current) {
       door.current.getWorldPosition(tmp.current);
-      if (Math.abs(tmp.current.x) > 0.05) { mirror.current = tmp.current.x > 0 ? -1 : 1; sideDone.current = true; }
+      const dx = tmp.current.x - center.current.x;
+      if (Math.abs(dx) > 0.05) { mirror.current = dx > 0 ? -1 : 1; sideDone.current = true; }
     }
-    const m = mirror.current;
-    const pos = sample("pos", p) as number[];
-    const tgt = sample("tgt", p) as number[];
-    camera.position.set(pos[0] * m, pos[1], pos[2]);
-    camera.lookAt(tgt[0] * m, tgt[1], tgt[2]);
-    // ROTAZIONE COMPLETA dell'auto su se stessa (giro di 360°) tra 0.06 e 0.55
-    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.06, 0.55, p);
-    // SPORTELLO: resta CHIUSO durante il giro, poi si apre (0.52 -> 0.74) prima dell'ingresso
-    const open = ss(0.52, 0.74, p);
+    const m = mirror.current, c = center.current, s = size.current;
+    const rp = sampleKF("pos", p) as number[];
+    const rt = sampleKF("tgt", p) as number[];
+    camera.position.set(c.x + rp[0] * s.x * m, c.y + rp[1] * s.y, c.z + rp[2] * s.z);
+    camera.lookAt(c.x + rt[0] * s.x * m, c.y + rt[1] * s.y, c.z + rt[2] * s.z);
+    // UN SOLO giro completo (360°), sportello CHIUSO durante il giro (0.05 -> 0.50)
+    if (root.current) root.current.rotation.y = -Math.PI * 2 * ss(0.05, 0.50, p);
+    // SPORTELLO: si apre a giro finito (0.50 -> 0.66), prima dell'ingresso
+    const open = ss(0.50, 0.66, p);
     if (CAR_CONFIG.hasDoorAnimationClip && action.current && mixer.current) {
       const dur = action.current.getClip().duration || 1;
       action.current.time = dur * open; mixer.current.update(0);
@@ -226,7 +238,7 @@ export default function CinemaIntro() {
       if (w1.current) { const a = ss(0.20, 0.34, p); w1.current.style.opacity = String(a * (1 - out)); w1.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       if (w2.current) { const a = ss(0.28, 0.42, p); w2.current.style.opacity = String(a * (1 - out)); w2.current.style.transform = `translateY(${40 * (1 - a) - out * 24}px)`; }
       // finale: dopo l'ingresso in abitacolo lo schermo sfuma nel NERO, poi compare il sito
-      if (endBlack.current) endBlack.current.style.opacity = String(ss(0.86, 1.0, p));
+      if (endBlack.current) endBlack.current.style.opacity = String(ss(0.93, 1.0, p));
       if (cue.current) cue.current.style.opacity = String((1 - ss(0.02, 0.1, p)) * (ready ? 1 : 0));
       if (bar.current) bar.current.style.width = p * 100 + "%";
       // header e menu compaiono solo a intro conclusa

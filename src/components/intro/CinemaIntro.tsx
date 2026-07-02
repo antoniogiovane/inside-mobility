@@ -225,8 +225,7 @@ export default function CinemaIntro() {
   const bar = useRef<HTMLElement>(null);
 
   // ---- audio motore (opt-in, salvato in memoria) ----
-  // 1) prova a usare un file reale royalty-free in public/engine.mp3 (rombo GT3-RS style)
-  // 2) se manca, ripiega sul rombo sintetizzato
+  // Usa ESCLUSIVAMENTE il file reale public/porsche sound.mp3 (nessun suono sintetizzato).
   const [soundOn, setSoundOn] = useState(typeof window !== "undefined" && localStorage.getItem("im-sound") === "1");
   const soundRef = useRef<boolean>(soundOn);
   const audioEl = useRef<HTMLAudioElement | null>(null);
@@ -239,7 +238,7 @@ export default function CinemaIntro() {
     if (audioEl.current) return audioEl.current;
     const a = new Audio("/porsche%20sound.mp3");
     a.loop = true; a.preload = "auto"; a.volume = 1; (a as any).playsInline = true;
-    a.addEventListener("error", () => { fileOk.current = false; initAudio(); });
+    a.addEventListener("error", () => { fileOk.current = false; });
     // Routing Web Audio: il volume via .volume non funziona su iOS, il gain sì.
     try {
       const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
@@ -253,21 +252,6 @@ export default function CinemaIntro() {
     } catch (e) { /* fallback: si userà .volume (desktop) */ }
     audioEl.current = a; return a;
   };
-  const audio = useRef<{ ctx: AudioContext; master: GainNode; filter: BiquadFilterNode; oscs: { o: OscillatorNode; mult: number }[] } | null>(null);
-  const initAudio = () => {
-    if (audio.current) return;
-    const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
-    const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 500; filter.Q.value = 0.9; filter.connect(master);
-    const oscs = ([[1, 0.5], [0.5, 0.4], [2, 0.22], [3, 0.12]] as [number, number][]).map(([mult, g]) => {
-      const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = 55 * mult;
-      const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(filter); o.start();
-      return { o, mult };
-    });
-    audio.current = { ctx, master, filter, oscs };
-  };
   const toggleSound = () => {
     const next = !soundRef.current;
     soundRef.current = next; setSoundOn(next);
@@ -275,10 +259,10 @@ export default function CinemaIntro() {
     if (next) {
       const a = ensureFile();
       fileCtx.current?.resume?.();
-      a.play().then(() => { fileOk.current = true; }).catch(() => { fileOk.current = false; initAudio(); audio.current?.ctx.resume?.(); });
+      a.play().catch(() => {});
     } else {
       if (audioEl.current) audioEl.current.pause();
-      if (audio.current) audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
+      if (fileGain.current && fileCtx.current) fileGain.current.gain.setTargetAtTime(0, fileCtx.current.currentTime, 0.1);
     }
   };
 
@@ -313,42 +297,31 @@ export default function CinemaIntro() {
       // header e menu compaiono solo a intro conclusa
       document.body.classList.toggle("intro-lock", p < 0.985);
       // rombo motore: sale avvicinandosi, picco allo sportello, poi sfuma nel nero
-      if (soundRef.current) {
+      if (soundRef.current && fileOk.current) {
         const rpm = ss(0.06, 0.9, p);
         const vol = ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
-        if (fileOk.current && audioEl.current) {
-          // volume legato allo scroll: via GainNode (funziona su iOS) o .volume (fallback desktop)
-          const target = Math.max(0, Math.min(1, 0.85 * vol));
-          if (fileGain.current && fileCtx.current) {
-            fileGain.current.gain.setTargetAtTime(target, fileCtx.current.currentTime, 0.08);
-          } else {
-            audioEl.current.volume = target;
-          }
-          // il playbackRate glitcha su mobile: lo tocco solo su desktop, a step e throttlato
-          if (!isMobile) {
-            const now = performance.now();
-            if (now - lastAudioT.current > 120) {
-              lastAudioT.current = now;
-              const pr = 0.92 + rpm * 0.4;
-              if (Math.abs(audioEl.current.playbackRate - pr) > 0.06) audioEl.current.playbackRate = pr;
-            }
-          }
+        // solo il file reale, creandolo/riprendendolo se serve
+        const a = audioEl.current || ensureFile();
+        if (a.paused) { fileCtx.current?.resume?.(); a.play().catch(() => {}); }
+        // volume legato allo scroll: via GainNode (funziona su iOS) o .volume (fallback desktop)
+        const target = Math.max(0, Math.min(1, 0.85 * vol));
+        if (fileGain.current && fileCtx.current) {
+          fileGain.current.gain.setTargetAtTime(target, fileCtx.current.currentTime, 0.08);
         } else {
-          if (!audio.current) initAudio();
-          const a = audio.current;
-          if (a) {
-            if (a.ctx.state === "suspended") a.ctx.resume();
-            const t = a.ctx.currentTime;
-            const base = 46 + rpm * 150;
-            a.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(base * mult, t, 0.06));
-            a.filter.frequency.setTargetAtTime(380 + rpm * 2400, t, 0.06);
-            a.master.gain.setTargetAtTime(0.4 * vol, t, 0.09);
+          a.volume = target;
+        }
+        // il playbackRate glitcha su mobile: lo tocco solo su desktop, a step e throttlato
+        if (!isMobile) {
+          const now = performance.now();
+          if (now - lastAudioT.current > 120) {
+            lastAudioT.current = now;
+            const pr = 0.92 + rpm * 0.4;
+            if (Math.abs(a.playbackRate - pr) > 0.06) a.playbackRate = pr;
           }
         }
       } else {
         if (fileGain.current && fileCtx.current) fileGain.current.gain.setTargetAtTime(0, fileCtx.current.currentTime, 0.1);
         else if (audioEl.current) audioEl.current.volume = 0;
-        if (audio.current) audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
       }
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
@@ -360,8 +333,8 @@ export default function CinemaIntro() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       document.body.classList.remove("intro-lock");
-      if (audio.current) { try { audio.current.ctx.close(); } catch (e) { /* noop */ } audio.current = null; }
       if (audioEl.current) { try { audioEl.current.pause(); } catch (e) { /* noop */ } audioEl.current = null; }
+      if (fileCtx.current) { try { fileCtx.current.close(); } catch (e) { /* noop */ } fileCtx.current = null; fileGain.current = null; }
     };
   }, [reduce, ready]);
 

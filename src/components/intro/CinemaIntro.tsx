@@ -170,7 +170,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
       <spotLight position={[6, 8, 4]} angle={0.5} penumbra={1} intensity={2.2} castShadow={!mobile} shadow-bias={-0.0002} />
       <spotLight position={[-6, 5, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#5b9dff" />
       <pointLight ref={cabinLight} distance={2.8} decay={2} color="#ffffff" intensity={0} />
-      <Environment resolution={mobile ? 128 : 256}>
+      <Environment resolution={mobile ? 256 : 256}>
         <Lightformer intensity={2.4} position={[0, 4, -6]} scale={[12, 5, 1]} />
         <Lightformer intensity={1.2} position={[-5, 2, 2]} scale={[6, 6, 1]} color="#9cc4ff" />
         <Lightformer intensity={1.2} position={[5, 2, 2]} scale={[6, 6, 1]} color="#ffffff" />
@@ -316,8 +316,9 @@ export default function CinemaIntro() {
       <div className="c3d-stage">
         {!reduce && (
           <div className="c3d-canvas">
-            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.3] : [1, 1.8]} camera={{ position: [0, 1.5, 10.6], fov: 38 }} gl={{ antialias: !isMobile, powerPreference: "high-performance" }}>
+            <Canvas shadows={!isMobile} dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1.5, 2)]} camera={{ position: [0, 1.5, 10.6], fov: 38 }} gl={{ antialias: true, powerPreference: "high-performance" }}>
               <color attach="background" args={["#000000"]} />
+              <fog attach="fog" args={["#000000", 9, 26]} />
               <Scene progress={progress} mobile={isMobile} />
             </Canvas>
           </div>

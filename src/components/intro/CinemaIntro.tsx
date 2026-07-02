@@ -224,6 +224,32 @@ export default function CinemaIntro() {
   const cue = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
+  // ---- audio motore sintetizzato (opt-in, salvato in memoria) ----
+  const [soundOn, setSoundOn] = useState(typeof window !== "undefined" && localStorage.getItem("im-sound") === "1");
+  const soundRef = useRef<boolean>(soundOn);
+  const audio = useRef<{ ctx: AudioContext; master: GainNode; filter: BiquadFilterNode; oscs: { o: OscillatorNode; mult: number }[] } | null>(null);
+  const initAudio = () => {
+    if (audio.current) return;
+    const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 500; filter.Q.value = 0.9; filter.connect(master);
+    const oscs = ([[1, 0.5], [0.5, 0.4], [2, 0.22], [3, 0.12]] as [number, number][]).map(([mult, g]) => {
+      const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = 55 * mult;
+      const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(filter); o.start();
+      return { o, mult };
+    });
+    audio.current = { ctx, master, filter, oscs };
+  };
+  const toggleSound = () => {
+    const next = !soundRef.current;
+    soundRef.current = next; setSoundOn(next);
+    try { localStorage.setItem("im-sound", next ? "1" : "0"); } catch (e) { /* noop */ }
+    if (next) { initAudio(); audio.current?.ctx.resume?.(); }
+    else if (audio.current) { audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1); }
+  };
+
   // stato "modello pronto": chiude la schermata nera di boot
   const { active, progress: loadPct } = useProgress();
   const [ready, setReady] = useState(false);
@@ -254,6 +280,23 @@ export default function CinemaIntro() {
       if (bar.current) bar.current.style.width = p * 100 + "%";
       // header e menu compaiono solo a intro conclusa
       document.body.classList.toggle("intro-lock", p < 0.985);
+      // rombo motore: sale avvicinandosi, picco allo sportello, poi sfuma nel nero
+      if (soundRef.current) {
+        if (!audio.current) initAudio();
+        const a = audio.current;
+        if (a) {
+          if (a.ctx.state === "suspended") a.ctx.resume();
+          const t = a.ctx.currentTime;
+          const rpm = ss(0.06, 0.9, p);
+          const base = 46 + rpm * 150;
+          a.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(base * mult, t, 0.06));
+          a.filter.frequency.setTargetAtTime(380 + rpm * 2400, t, 0.06);
+          const vol = 0.4 * ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
+          a.master.gain.setTargetAtTime(vol, t, 0.09);
+        }
+      } else if (audio.current) {
+        audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
+      }
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -264,6 +307,7 @@ export default function CinemaIntro() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       document.body.classList.remove("intro-lock");
+      if (audio.current) { try { audio.current.ctx.close(); } catch (e) { /* noop */ } audio.current = null; }
     };
   }, [reduce, ready]);
 
@@ -290,6 +334,13 @@ export default function CinemaIntro() {
           </div>
           <div className="c3d-cue" ref={cue}><span>Scorri</span><i></i></div>
         </div>
+        {!reduce && (
+          <button className={"c3d-sound in-pointer" + (soundOn ? " on" : "")} onClick={toggleSound}
+            aria-label={soundOn ? "Disattiva audio motore" : "Attiva audio motore"} title="Audio motore">
+            <span className="c3d-sound-ico" aria-hidden="true">{soundOn ? "🔊" : "🔈"}</span>
+            <span className="c3d-sound-txt">{soundOn ? "Audio on" : "Attiva audio"}</span>
+          </button>
+        )}
         <div className="c3d-bar"><i ref={bar}></i></div>
         {/* sfumatura finale al nero: si passa dall'abitacolo al buio, poi compare il sito */}
         {!reduce && <div className="c3d-end" ref={endBlack}></div>}

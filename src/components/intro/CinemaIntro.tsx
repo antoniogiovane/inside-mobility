@@ -232,11 +232,25 @@ export default function CinemaIntro() {
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const fileOk = useRef(true);
   const lastAudioT = useRef(0);
+  // su iOS `HTMLAudioElement.volume` è ignorato: instrado il file in un GainNode
+  const fileCtx = useRef<AudioContext | null>(null);
+  const fileGain = useRef<GainNode | null>(null);
   const ensureFile = () => {
     if (audioEl.current) return audioEl.current;
     const a = new Audio("/porsche%20sound.mp3");
-    a.loop = true; a.preload = "auto"; a.volume = 0; (a as any).playsInline = true;
+    a.loop = true; a.preload = "auto"; a.volume = 1; (a as any).playsInline = true;
     a.addEventListener("error", () => { fileOk.current = false; initAudio(); });
+    // Routing Web Audio: il volume via .volume non funziona su iOS, il gain sì.
+    try {
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+      if (Ctx) {
+        const ctx = new Ctx();
+        const src = ctx.createMediaElementSource(a);
+        const g = ctx.createGain(); g.gain.value = 0;
+        src.connect(g); g.connect(ctx.destination);
+        fileCtx.current = ctx; fileGain.current = g;
+      }
+    } catch (e) { /* fallback: si userà .volume (desktop) */ }
     audioEl.current = a; return a;
   };
   const audio = useRef<{ ctx: AudioContext; master: GainNode; filter: BiquadFilterNode; oscs: { o: OscillatorNode; mult: number }[] } | null>(null);
@@ -260,6 +274,7 @@ export default function CinemaIntro() {
     try { localStorage.setItem("im-sound", next ? "1" : "0"); } catch (e) { /* noop */ }
     if (next) {
       const a = ensureFile();
+      fileCtx.current?.resume?.();
       a.play().then(() => { fileOk.current = true; }).catch(() => { fileOk.current = false; initAudio(); audio.current?.ctx.resume?.(); });
     } else {
       if (audioEl.current) audioEl.current.pause();
@@ -302,13 +317,18 @@ export default function CinemaIntro() {
         const rpm = ss(0.06, 0.9, p);
         const vol = ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
         if (fileOk.current && audioEl.current) {
-          // aggiorno l'audio max ~8 volte/sec per non far scattare lo scroll/l'audio
-          const now = performance.now();
-          if (now - lastAudioT.current > 120) {
-            lastAudioT.current = now;
-            audioEl.current.volume = Math.max(0, Math.min(1, 0.7 * vol));
-            // il playbackRate glitcha su mobile: lo tocco solo su desktop e a step
-            if (!isMobile) {
+          // volume legato allo scroll: via GainNode (funziona su iOS) o .volume (fallback desktop)
+          const target = Math.max(0, Math.min(1, 0.85 * vol));
+          if (fileGain.current && fileCtx.current) {
+            fileGain.current.gain.setTargetAtTime(target, fileCtx.current.currentTime, 0.08);
+          } else {
+            audioEl.current.volume = target;
+          }
+          // il playbackRate glitcha su mobile: lo tocco solo su desktop, a step e throttlato
+          if (!isMobile) {
+            const now = performance.now();
+            if (now - lastAudioT.current > 120) {
+              lastAudioT.current = now;
               const pr = 0.92 + rpm * 0.4;
               if (Math.abs(audioEl.current.playbackRate - pr) > 0.06) audioEl.current.playbackRate = pr;
             }
@@ -326,7 +346,8 @@ export default function CinemaIntro() {
           }
         }
       } else {
-        if (audioEl.current) audioEl.current.volume = 0;
+        if (fileGain.current && fileCtx.current) fileGain.current.gain.setTargetAtTime(0, fileCtx.current.currentTime, 0.1);
+        else if (audioEl.current) audioEl.current.volume = 0;
         if (audio.current) audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
       }
     };

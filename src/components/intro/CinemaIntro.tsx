@@ -170,7 +170,7 @@ function Scene({ progress, mobile }: { progress: React.MutableRefObject<number>;
       <spotLight position={[6, 8, 4]} angle={0.5} penumbra={1} intensity={2.2} castShadow={!mobile} shadow-bias={-0.0002} />
       <spotLight position={[-6, 5, -4]} angle={0.6} penumbra={1} intensity={1.1} color="#5b9dff" />
       <pointLight ref={cabinLight} distance={2.8} decay={2} color="#ffffff" intensity={0} />
-      <Environment resolution={mobile ? 256 : 256}>
+      <Environment resolution={mobile ? 128 : 256}>
         <Lightformer intensity={2.4} position={[0, 4, -6]} scale={[12, 5, 1]} />
         <Lightformer intensity={1.2} position={[-5, 2, 2]} scale={[6, 6, 1]} color="#9cc4ff" />
         <Lightformer intensity={1.2} position={[5, 2, 2]} scale={[6, 6, 1]} color="#ffffff" />
@@ -231,6 +231,7 @@ export default function CinemaIntro() {
   const soundRef = useRef<boolean>(soundOn);
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const fileOk = useRef(true);
+  const lastAudioT = useRef(0);
   const ensureFile = () => {
     if (audioEl.current) return audioEl.current;
     const a = new Audio("/porsche%20sound.mp3");
@@ -301,8 +302,17 @@ export default function CinemaIntro() {
         const rpm = ss(0.06, 0.9, p);
         const vol = ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
         if (fileOk.current && audioEl.current) {
-          audioEl.current.volume = Math.max(0, Math.min(1, 0.65 * vol));
-          audioEl.current.playbackRate = 0.85 + rpm * 0.6; // effetto "sale di giri"
+          // aggiorno l'audio max ~8 volte/sec per non far scattare lo scroll/l'audio
+          const now = performance.now();
+          if (now - lastAudioT.current > 120) {
+            lastAudioT.current = now;
+            audioEl.current.volume = Math.max(0, Math.min(1, 0.7 * vol));
+            // il playbackRate glitcha su mobile: lo tocco solo su desktop e a step
+            if (!isMobile) {
+              const pr = 0.92 + rpm * 0.4;
+              if (Math.abs(audioEl.current.playbackRate - pr) > 0.06) audioEl.current.playbackRate = pr;
+            }
+          }
         } else {
           if (!audio.current) initAudio();
           const a = audio.current;
@@ -339,7 +349,7 @@ export default function CinemaIntro() {
       <div className="c3d-stage">
         {!reduce && (
           <div className="c3d-canvas">
-            <Canvas shadows={!isMobile} dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1.5, 2)]} camera={{ position: [0, 1.5, 10.6], fov: 38 }} gl={{ antialias: true, powerPreference: "high-performance" }}>
+            <Canvas shadows={!isMobile} dpr={isMobile ? [1, 1.6] : [1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1.6, 2)]} camera={{ position: [0, 1.5, 10.6], fov: 38 }} gl={{ antialias: true, powerPreference: "high-performance" }}>
               <color attach="background" args={["#000000"]} />
               <fog attach="fog" args={["#000000", 9, 26]} />
               <Scene progress={progress} mobile={isMobile} />

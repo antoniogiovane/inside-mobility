@@ -240,7 +240,7 @@ export default function CinemaIntro() {
   const ensureFile = () => {
     if (audioEl.current) return audioEl.current;
     const a = new Audio("/porsche%20sound.mp3");
-    a.loop = true; a.preload = "auto"; a.volume = 1; (a as any).playsInline = true;
+    a.loop = true; a.preload = "auto"; a.volume = 0; (a as any).playsInline = true;
     a.addEventListener("error", () => { fileOk.current = false; });
     // Routing Web Audio SOLO su iOS (dove .volume è ignorato). Su Safari desktop il routing
     // può restare muto, quindi lì e altrove si usa direttamente .volume.
@@ -264,6 +264,9 @@ export default function CinemaIntro() {
     if (next) {
       const a = ensureFile();
       fileCtx.current?.resume?.();
+      // feedback udibile immediato + sblocco audio su Safari (play a volume non-zero nel gesto utente)
+      if (isIOS) { if (fileGain.current && fileCtx.current) fileGain.current.gain.setValueAtTime(0.14, fileCtx.current.currentTime); }
+      else { a.volume = 0.14; }
       a.play().catch(() => {});
     } else {
       if (audioEl.current) audioEl.current.pause();
@@ -304,7 +307,8 @@ export default function CinemaIntro() {
       // rombo motore: sale avvicinandosi, picco allo sportello, poi sfuma nel nero
       if (soundRef.current && fileOk.current) {
         const rpm = ss(0.06, 0.9, p);
-        const vol = ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
+        // "minimo" udibile appena attivi (idle), sale avvicinandosi all'auto, sfuma nel finale al nero
+        const vol = Math.max(0.14, ss(0.06, 0.5, p)) * (1 - ss(0.88, 1.0, p));
         // solo il file reale, creandolo/riprendendolo se serve
         const a = audioEl.current || ensureFile();
         if (a.paused) { fileCtx.current?.resume?.(); a.play().catch(() => {}); }

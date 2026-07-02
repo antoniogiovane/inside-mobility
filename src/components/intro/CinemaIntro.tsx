@@ -229,7 +229,6 @@ export default function CinemaIntro() {
   // Parte SEMPRE spento a ogni apertura: nessuna persistenza (l'autoplay è bloccato senza gesto utente).
   const [soundOn, setSoundOn] = useState(false);
   const soundRef = useRef<boolean>(soundOn);
-  const lastAudioT = useRef(0);
   // Audio motore via <audio> nativo. FILE .m4a (AAC): Safari NON riproduce questo MP3
   // (errore "formato non supportato", codice 4). L'AAC è decodificato nativamente ovunque.
   const AUDIO_SRC = "/porsche-sound.m4a";
@@ -312,18 +311,10 @@ export default function CinemaIntro() {
       if (soundRef.current && audioEl.current) {
         const a = audioEl.current;
         if (a.paused) { actx.current?.resume?.(); a.play().catch(() => {}); }
-        // "minimo" udibile appena attivi (idle), sale avvicinandosi all'auto, sfuma nel finale al nero
+        // volume: "minimo" udibile appena attivi, sale avvicinandosi all'auto, sfuma nel finale al nero.
+        // NB: niente cambi di playbackRate (su Safari fanno saltare/interrompere l'audio durante lo scroll).
         const vol = Math.max(0.14, ss(0.06, 0.5, p)) * (1 - ss(0.88, 1.0, p));
         setVol(0.85 * vol);
-        // effetto "rev": alzo il playbackRate avvicinandomi (solo desktop, throttlato)
-        if (!isMobile) {
-          const now = performance.now();
-          if (now - lastAudioT.current > 120) {
-            lastAudioT.current = now;
-            const pr = 0.92 + ss(0.06, 0.9, p) * 0.4;
-            if (Math.abs(a.playbackRate - pr) > 0.06) a.playbackRate = pr;
-          }
-        }
       } else {
         setVol(0);
       }

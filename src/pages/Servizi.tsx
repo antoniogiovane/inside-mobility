@@ -66,7 +66,7 @@ export default function Servizi() {
             </ul>
             <Link to="/configuratore" className="btn btn-gold mt-2">Personalizza la tua auto <span className="arrow">→</span></Link>
           </div>
-          <div className="feature-media" data-reveal data-reveal-delay="1"><img src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1400&auto=format&fit=crop" alt="Carrozzeria e dettaglio" loading="lazy" /></div>
+          <div className="feature-media" data-reveal data-reveal-delay="1"><img src="/img/personalizzazione%20inside%20mobilty.webp" alt="Personalizzazione e detailing Inside Mobility" loading="lazy" /></div>
         </div>
       </div></section>
 

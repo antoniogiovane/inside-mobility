@@ -80,8 +80,8 @@
 .cfg-result.active{display:block}
 .result-hero{position:relative;text-align:center;padding:2.4rem 2rem 1rem}
 .result-live{display:inline-flex;gap:.5rem;align-items:center;padding:.5rem 1rem;border:1px solid var(--line-strong);border-radius:6px;font-size:.82rem;color:var(--muted);margin-bottom:1.2rem}
-.result-hero h2{font-size:clamp(1.7rem,5vw,2.6rem);line-height:1.1}
-.result-hero .car-name{display:block;margin-top:.3rem}
+.result-hero h2{font-size:clamp(1.7rem,5vw,2.6rem);line-height:1.2;overflow:visible}
+.result-hero .car-name{display:block;margin-top:.3rem;line-height:1.2;padding-bottom:.16em;overflow:visible}
 .result-photo{
   position:relative;margin:1.6rem auto 0;max-width:660px;border-radius:var(--radius-lg);overflow:visible;
   border:1px solid var(--line);background:var(--grad-dark);padding:2rem;isolation:isolate;

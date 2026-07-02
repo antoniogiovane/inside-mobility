@@ -230,55 +230,51 @@ export default function CinemaIntro() {
   const [soundOn, setSoundOn] = useState(false);
   const soundRef = useRef<boolean>(soundOn);
   const lastAudioT = useRef(0);
-  // Web Audio puro: decodifico il file in un buffer e lo suono con un GainNode.
-  // Funziona in modo identico e affidabile su Chrome, Safari e iOS (niente HTMLAudioElement).
+  // Audio motore via <audio> nativo. FILE .m4a (AAC): Safari NON riproduce questo MP3
+  // (errore "formato non supportato", codice 4). L'AAC è decodificato nativamente ovunque.
+  const AUDIO_SRC = "/porsche-sound.m4a";
+  const isIOS = typeof navigator !== "undefined" && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1));
+  const audioEl = useRef<HTMLAudioElement | null>(null);
+  // iOS ignora HTMLAudioElement.volume: lì instrado l'output (già decodificato) in un GainNode.
   const actx = useRef<AudioContext | null>(null);
   const gain = useRef<GainNode | null>(null);
-  const srcNode = useRef<AudioBufferSourceNode | null>(null);
-  const audioBuf = useRef<AudioBuffer | null>(null);
-  const rawArr = useRef<ArrayBuffer | null>(null);
-  // preload dei byte del file (il decode avverrà dopo, nel gesto utente)
-  useEffect(() => {
-    let alive = true;
-    fetch("/porsche%20sound.mp3").then((r) => r.arrayBuffer()).then((b) => { if (alive) rawArr.current = b; }).catch(() => {});
-    return () => { alive = false; };
-  }, []);
-  const ensureCtx = () => {
-    if (!actx.current) {
-      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
-      if (!Ctx) return null;
-      const ctx: AudioContext = new Ctx();
-      const g = ctx.createGain(); g.gain.value = 0; g.connect(ctx.destination);
-      actx.current = ctx; gain.current = g;
+  const ensureEl = () => {
+    if (audioEl.current) return audioEl.current;
+    const a = new Audio(AUDIO_SRC);
+    a.loop = true; a.preload = "auto"; a.volume = 0; (a as any).playsInline = true;
+    a.setAttribute("playsinline", "");
+    a.style.display = "none";
+    try { document.body.appendChild(a); } catch (e) { /* noop */ }
+    if (isIOS) {
+      try {
+        const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+        if (Ctx) {
+          const ctx: AudioContext = new Ctx();
+          const src = ctx.createMediaElementSource(a);
+          const g = ctx.createGain(); g.gain.value = 0;
+          src.connect(g); g.connect(ctx.destination);
+          actx.current = ctx; gain.current = g;
+        }
+      } catch (e) { /* fallback: si userà .volume */ }
     }
-    return actx.current;
+    audioEl.current = a; return a;
   };
-  const startLoop = () => {
-    const ctx = actx.current;
-    if (!ctx || !audioBuf.current || !gain.current) return;
-    try { srcNode.current?.stop(); } catch (e) { /* noop */ }
-    const s = ctx.createBufferSource();
-    s.buffer = audioBuf.current; s.loop = true;
-    s.connect(gain.current);
-    try { s.start(0); } catch (e) { /* noop */ }
-    srcNode.current = s;
+  const setVol = (v: number) => {
+    const c = Math.max(0, Math.min(1, v));
+    if (isIOS && gain.current && actx.current) gain.current.gain.setTargetAtTime(c, actx.current.currentTime, 0.08);
+    else if (audioEl.current) audioEl.current.volume = c;
   };
   const toggleSound = () => {
     const next = !soundRef.current;
     soundRef.current = next; setSoundOn(next);
     if (next) {
-      const ctx = ensureCtx();
-      if (!ctx) return;
-      ctx.resume?.();
-      if (gain.current) gain.current.gain.setValueAtTime(0.14, ctx.currentTime); // feedback udibile immediato
-      if (audioBuf.current) { startLoop(); return; }
-      const decode = (buf: ArrayBuffer) => ctx.decodeAudioData(buf.slice(0)).then((ab) => { audioBuf.current = ab; if (soundRef.current) startLoop(); });
-      if (rawArr.current) decode(rawArr.current).catch(() => {});
-      else fetch("/porsche%20sound.mp3").then((r) => r.arrayBuffer()).then((b) => { rawArr.current = b; return decode(b); }).catch(() => {});
+      const a = ensureEl();
+      actx.current?.resume?.();
+      setVol(0.14); // feedback udibile immediato
+      a.play().catch(() => {});
     } else {
-      try { srcNode.current?.stop(); } catch (e) { /* noop */ }
-      srcNode.current = null;
-      if (gain.current && actx.current) gain.current.gain.setTargetAtTime(0, actx.current.currentTime, 0.1);
+      if (audioEl.current) audioEl.current.pause();
+      setVol(0);
     }
   };
 
@@ -313,22 +309,23 @@ export default function CinemaIntro() {
       // header e menu compaiono solo a intro conclusa
       document.body.classList.toggle("intro-lock", p < 0.985);
       // rombo motore: sale avvicinandosi, picco allo sportello, poi sfuma nel nero
-      if (soundRef.current && gain.current && actx.current) {
+      if (soundRef.current && audioEl.current) {
+        const a = audioEl.current;
+        if (a.paused) { actx.current?.resume?.(); a.play().catch(() => {}); }
         // "minimo" udibile appena attivi (idle), sale avvicinandosi all'auto, sfuma nel finale al nero
         const vol = Math.max(0.14, ss(0.06, 0.5, p)) * (1 - ss(0.88, 1.0, p));
-        const target = Math.max(0, Math.min(1, 0.85 * vol));
-        gain.current.gain.setTargetAtTime(target, actx.current.currentTime, 0.08);
+        setVol(0.85 * vol);
         // effetto "rev": alzo il playbackRate avvicinandomi (solo desktop, throttlato)
-        if (!isMobile && srcNode.current) {
+        if (!isMobile) {
           const now = performance.now();
           if (now - lastAudioT.current > 120) {
             lastAudioT.current = now;
             const pr = 0.92 + ss(0.06, 0.9, p) * 0.4;
-            try { srcNode.current.playbackRate.setTargetAtTime(pr, actx.current.currentTime, 0.12); } catch (e) { /* noop */ }
+            if (Math.abs(a.playbackRate - pr) > 0.06) a.playbackRate = pr;
           }
         }
-      } else if (gain.current && actx.current) {
-        gain.current.gain.setTargetAtTime(0, actx.current.currentTime, 0.1);
+      } else {
+        setVol(0);
       }
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
@@ -340,8 +337,7 @@ export default function CinemaIntro() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       document.body.classList.remove("intro-lock");
-      try { srcNode.current?.stop(); } catch (e) { /* noop */ }
-      srcNode.current = null;
+      if (audioEl.current) { try { audioEl.current.pause(); audioEl.current.remove(); } catch (e) { /* noop */ } audioEl.current = null; }
       if (actx.current) { try { actx.current.close(); } catch (e) { /* noop */ } actx.current = null; gain.current = null; }
     };
   }, [reduce, ready]);

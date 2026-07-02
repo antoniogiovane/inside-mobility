@@ -215,6 +215,8 @@ function BootScreen({ done }: { done: boolean }) {
 export default function CinemaIntro() {
   const reduce = typeof window !== "undefined" && window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const isMobile = typeof window !== "undefined" && window.matchMedia && matchMedia("(max-width: 768px)").matches;
+  // solo iOS ignora HTMLAudioElement.volume: lì serve il GainNode. Ovunque altrove (anche Safari desktop) .volume funziona.
+  const isIOS = typeof navigator !== "undefined" && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1));
   const sec = useRef<HTMLElement>(null);
   const progress = useRef(0);
   const logo = useRef<HTMLDivElement>(null);
@@ -240,17 +242,20 @@ export default function CinemaIntro() {
     const a = new Audio("/porsche%20sound.mp3");
     a.loop = true; a.preload = "auto"; a.volume = 1; (a as any).playsInline = true;
     a.addEventListener("error", () => { fileOk.current = false; });
-    // Routing Web Audio: il volume via .volume non funziona su iOS, il gain sì.
-    try {
-      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
-      if (Ctx) {
-        const ctx = new Ctx();
-        const src = ctx.createMediaElementSource(a);
-        const g = ctx.createGain(); g.gain.value = 0;
-        src.connect(g); g.connect(ctx.destination);
-        fileCtx.current = ctx; fileGain.current = g;
-      }
-    } catch (e) { /* fallback: si userà .volume (desktop) */ }
+    // Routing Web Audio SOLO su iOS (dove .volume è ignorato). Su Safari desktop il routing
+    // può restare muto, quindi lì e altrove si usa direttamente .volume.
+    if (isIOS) {
+      try {
+        const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+        if (Ctx) {
+          const ctx = new Ctx();
+          const src = ctx.createMediaElementSource(a);
+          const g = ctx.createGain(); g.gain.value = 0;
+          src.connect(g); g.connect(ctx.destination);
+          fileCtx.current = ctx; fileGain.current = g;
+        }
+      } catch (e) { /* fallback: si userà .volume */ }
+    }
     audioEl.current = a; return a;
   };
   const toggleSound = () => {

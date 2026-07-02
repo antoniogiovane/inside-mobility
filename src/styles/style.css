@@ -375,6 +375,9 @@ footer a:hover{color:var(--brand-2);transform:translateX(4px)}
 .socials a{width:42px;height:42px;border:1px solid var(--line-strong);border-radius:6px;display:grid;place-items:center;transition:.35s var(--ease)}
 .socials a:hover{border-color:var(--brand);color:var(--brand-2);transform:translateY(-3px)}
 .socials svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7}
+/* Icone dentro i pulsanti: outline coerente (l'email non è più un quadrato pieno).
+   Le icone "piene" come WhatsApp hanno fill/stroke inline e restano piene. */
+.btn svg{width:1.05em;height:1.05em;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-.16em;flex:none}
 
 /* ---------- PAGE HERO ---------- */
 .page-hero{padding:calc(var(--nav-h) + 5rem) 0 3.5rem;background:var(--grad-dark);border-bottom:1px solid var(--line);position:relative;overflow:hidden}

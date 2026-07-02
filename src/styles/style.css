@@ -117,8 +117,8 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.06;let
   will-change:transform;
 }
 .btn:active{transform:scale(.98)}
-.btn-gold{background:var(--grad-brand);color:#fff;box-shadow:var(--shadow-brand)}
-.btn-gold:hover{transform:translateY(-3px);box-shadow:0 26px 70px -18px rgba(31,111,242,.6)}
+.btn-gold{background:linear-gradient(180deg,#3b83f6 0%,#1f6ff2 100%);color:#fff;box-shadow:0 14px 34px -14px rgba(31,111,242,.55)}
+.btn-gold:hover{transform:translateY(-3px);box-shadow:0 22px 54px -16px rgba(31,111,242,.6)}
 .btn-ghost{border-color:var(--line-strong);color:var(--text);background:transparent}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand-2);transform:translateY(-3px)}
 .btn-lg{--pad:17px 38px;font-size:1rem}

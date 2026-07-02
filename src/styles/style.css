@@ -290,7 +290,7 @@ body.intro-lock .nav{opacity:0;visibility:hidden;transform:translateY(-110%);poi
   border-radius:var(--radius);padding:2rem;overflow:hidden;
   transition:transform .5s var(--ease),border-color .5s,box-shadow .5s;
 }
-.card::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:var(--grad-brand);
+.card::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:var(--grad-brand);pointer-events:none;
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .5s}
 .card:hover{transform:translateY(-8px);box-shadow:var(--shadow)}
 .card:hover::after{opacity:1}

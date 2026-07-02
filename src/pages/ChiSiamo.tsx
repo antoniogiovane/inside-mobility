@@ -25,7 +25,7 @@ export default function ChiSiamo() {
               <div><div className="num brand-text">0</div><div className="lbl">Compromessi</div></div>
             </div>
           </div>
-          <div className="feature-media" data-reveal data-reveal-delay="1"><img src="/img/Alessio%20e%20Alex.webp" alt="Alessio Alushaj e Alex Martella, fondatori di Inside Mobility" loading="lazy" /></div>
+          <div className="feature-media tall" data-reveal data-reveal-delay="1"><img src="/img/Alessio%20e%20Alex.webp" alt="Alessio Alushaj e Alex Martella, fondatori di Inside Mobility" loading="lazy" style={{ objectPosition: "center top" }} /></div>
         </div>
       </div></section>
 

@@ -25,6 +25,16 @@
 /* Sfumatura finale al nero (immersione nell'abitacolo -> buio -> sito) */
 .c3d-end{position:absolute;inset:0;z-index:5;background:#000;opacity:0;pointer-events:none}
 
+/* Toggle audio motore (opt-in) */
+.c3d-sound{position:absolute;top:22px;right:22px;z-index:7;display:inline-flex;align-items:center;gap:.5rem;
+  padding:.5rem .85rem;border:1px solid var(--line-strong);border-radius:100px;background:rgba(0,0,0,.4);
+  color:#eaf0fb;font-family:var(--font-body);font-size:.78rem;letter-spacing:.02em;cursor:pointer;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:auto;transition:border-color .25s,background .25s}
+.c3d-sound:hover{border-color:var(--brand-2)}
+.c3d-sound.on{border-color:var(--brand-2);background:rgba(31,111,242,.2)}
+.c3d-sound-ico{font-size:1rem;line-height:1}
+@media(max-width:640px){.c3d-sound{top:14px;right:12px;padding:.5rem}.c3d-sound-txt{display:none}}
+
 .c3d-loader{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.85rem;z-index:4}
 .c3d-loader img{width:80px;opacity:.9;animation:introBlink 1.1s ease-in-out infinite}
 @keyframes introBlink{0%,100%{opacity:1}50%{opacity:.22}}

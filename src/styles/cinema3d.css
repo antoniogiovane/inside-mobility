@@ -1,5 +1,5 @@
 /* Intro 3D scroll-driven */
-.c3d{position:relative;height:460vh;background:#04060c}
+.c3d{position:relative;height:460vh;background:#000}
 .c3d-stage{position:sticky;top:0;height:100svh;overflow:hidden;background:#000}
 .c3d-canvas{position:absolute;inset:0;z-index:1}
 .c3d-overlay{position:absolute;inset:0;z-index:2;pointer-events:none}

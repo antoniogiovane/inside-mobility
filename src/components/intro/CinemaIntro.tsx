@@ -224,9 +224,20 @@ export default function CinemaIntro() {
   const cue = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
-  // ---- audio motore sintetizzato (opt-in, salvato in memoria) ----
+  // ---- audio motore (opt-in, salvato in memoria) ----
+  // 1) prova a usare un file reale royalty-free in public/engine.mp3 (rombo GT3-RS style)
+  // 2) se manca, ripiega sul rombo sintetizzato
   const [soundOn, setSoundOn] = useState(typeof window !== "undefined" && localStorage.getItem("im-sound") === "1");
   const soundRef = useRef<boolean>(soundOn);
+  const audioEl = useRef<HTMLAudioElement | null>(null);
+  const fileOk = useRef(true);
+  const ensureFile = () => {
+    if (audioEl.current) return audioEl.current;
+    const a = new Audio("/porsche%20sound.mp3");
+    a.loop = true; a.preload = "auto"; a.volume = 0; (a as any).playsInline = true;
+    a.addEventListener("error", () => { fileOk.current = false; initAudio(); });
+    audioEl.current = a; return a;
+  };
   const audio = useRef<{ ctx: AudioContext; master: GainNode; filter: BiquadFilterNode; oscs: { o: OscillatorNode; mult: number }[] } | null>(null);
   const initAudio = () => {
     if (audio.current) return;
@@ -246,8 +257,13 @@ export default function CinemaIntro() {
     const next = !soundRef.current;
     soundRef.current = next; setSoundOn(next);
     try { localStorage.setItem("im-sound", next ? "1" : "0"); } catch (e) { /* noop */ }
-    if (next) { initAudio(); audio.current?.ctx.resume?.(); }
-    else if (audio.current) { audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1); }
+    if (next) {
+      const a = ensureFile();
+      a.play().then(() => { fileOk.current = true; }).catch(() => { fileOk.current = false; initAudio(); audio.current?.ctx.resume?.(); });
+    } else {
+      if (audioEl.current) audioEl.current.pause();
+      if (audio.current) audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
+    }
   };
 
   // stato "modello pronto": chiude la schermata nera di boot
@@ -282,20 +298,26 @@ export default function CinemaIntro() {
       document.body.classList.toggle("intro-lock", p < 0.985);
       // rombo motore: sale avvicinandosi, picco allo sportello, poi sfuma nel nero
       if (soundRef.current) {
-        if (!audio.current) initAudio();
-        const a = audio.current;
-        if (a) {
-          if (a.ctx.state === "suspended") a.ctx.resume();
-          const t = a.ctx.currentTime;
-          const rpm = ss(0.06, 0.9, p);
-          const base = 46 + rpm * 150;
-          a.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(base * mult, t, 0.06));
-          a.filter.frequency.setTargetAtTime(380 + rpm * 2400, t, 0.06);
-          const vol = 0.4 * ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
-          a.master.gain.setTargetAtTime(vol, t, 0.09);
+        const rpm = ss(0.06, 0.9, p);
+        const vol = ss(0.06, 0.5, p) * (1 - ss(0.9, 1.0, p));
+        if (fileOk.current && audioEl.current) {
+          audioEl.current.volume = Math.max(0, Math.min(1, 0.65 * vol));
+          audioEl.current.playbackRate = 0.85 + rpm * 0.6; // effetto "sale di giri"
+        } else {
+          if (!audio.current) initAudio();
+          const a = audio.current;
+          if (a) {
+            if (a.ctx.state === "suspended") a.ctx.resume();
+            const t = a.ctx.currentTime;
+            const base = 46 + rpm * 150;
+            a.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(base * mult, t, 0.06));
+            a.filter.frequency.setTargetAtTime(380 + rpm * 2400, t, 0.06);
+            a.master.gain.setTargetAtTime(0.4 * vol, t, 0.09);
+          }
         }
-      } else if (audio.current) {
-        audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
+      } else {
+        if (audioEl.current) audioEl.current.volume = 0;
+        if (audio.current) audio.current.master.gain.setTargetAtTime(0, audio.current.ctx.currentTime, 0.1);
       }
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
@@ -308,6 +330,7 @@ export default function CinemaIntro() {
       window.removeEventListener("resize", onScroll);
       document.body.classList.remove("intro-lock");
       if (audio.current) { try { audio.current.ctx.close(); } catch (e) { /* noop */ } audio.current = null; }
+      if (audioEl.current) { try { audioEl.current.pause(); } catch (e) { /* noop */ } audioEl.current = null; }
     };
   }, [reduce, ready]);
 

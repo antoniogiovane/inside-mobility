@@ -224,9 +224,10 @@ export default function CinemaIntro() {
   const cue = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLElement>(null);
 
-  // ---- audio motore (opt-in, salvato in memoria) ----
+  // ---- audio motore (opt-in) ----
   // Usa ESCLUSIVAMENTE il file reale public/porsche sound.mp3 (nessun suono sintetizzato).
-  const [soundOn, setSoundOn] = useState(typeof window !== "undefined" && localStorage.getItem("im-sound") === "1");
+  // Parte SEMPRE spento a ogni apertura: nessuna persistenza (l'autoplay è bloccato senza gesto utente).
+  const [soundOn, setSoundOn] = useState(false);
   const soundRef = useRef<boolean>(soundOn);
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const fileOk = useRef(true);
@@ -255,7 +256,6 @@ export default function CinemaIntro() {
   const toggleSound = () => {
     const next = !soundRef.current;
     soundRef.current = next; setSoundOn(next);
-    try { localStorage.setItem("im-sound", next ? "1" : "0"); } catch (e) { /* noop */ }
     if (next) {
       const a = ensureFile();
       fileCtx.current?.resume?.();

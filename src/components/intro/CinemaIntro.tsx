@@ -241,7 +241,11 @@ export default function CinemaIntro() {
     if (audioEl.current) return audioEl.current;
     const a = new Audio("/porsche%20sound.mp3");
     a.loop = true; a.preload = "auto"; a.volume = 0; (a as any).playsInline = true;
+    a.setAttribute("playsinline", "");
     a.addEventListener("error", () => { fileOk.current = false; });
+    // Safari: la riproduzione da new Audio() è affidabile solo se l'elemento è NEL DOM.
+    a.style.display = "none";
+    try { document.body.appendChild(a); } catch (e) { /* noop */ }
     // Routing Web Audio SOLO su iOS (dove .volume è ignorato). Su Safari desktop il routing
     // può restare muto, quindi lì e altrove si usa direttamente .volume.
     if (isIOS) {
@@ -256,6 +260,7 @@ export default function CinemaIntro() {
         }
       } catch (e) { /* fallback: si userà .volume */ }
     }
+    try { a.load(); } catch (e) { /* noop */ }
     audioEl.current = a; return a;
   };
   const toggleSound = () => {
@@ -267,7 +272,9 @@ export default function CinemaIntro() {
       // feedback udibile immediato + sblocco audio su Safari (play a volume non-zero nel gesto utente)
       if (isIOS) { if (fileGain.current && fileCtx.current) fileGain.current.gain.setValueAtTime(0.14, fileCtx.current.currentTime); }
       else { a.volume = 0.14; }
-      a.play().catch(() => {});
+      // Safari: se il primo play fallisce, ricarico e ritento (sempre dentro il gesto utente)
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(() => { try { a.load(); a.play().catch(() => {}); } catch (e) { /* noop */ } });
     } else {
       if (audioEl.current) audioEl.current.pause();
       if (fileGain.current && fileCtx.current) fileGain.current.gain.setTargetAtTime(0, fileCtx.current.currentTime, 0.1);
@@ -342,7 +349,7 @@ export default function CinemaIntro() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       document.body.classList.remove("intro-lock");
-      if (audioEl.current) { try { audioEl.current.pause(); } catch (e) { /* noop */ } audioEl.current = null; }
+      if (audioEl.current) { try { audioEl.current.pause(); audioEl.current.remove(); } catch (e) { /* noop */ } audioEl.current = null; }
       if (fileCtx.current) { try { fileCtx.current.close(); } catch (e) { /* noop */ } fileCtx.current = null; fileGain.current = null; }
     };
   }, [reduce, ready]);

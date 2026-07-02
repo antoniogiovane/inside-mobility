@@ -366,7 +366,7 @@ export default function CinemaIntro() {
           <button className={"c3d-sound in-pointer" + (soundOn ? " on" : "")} onClick={toggleSound}
             aria-label={soundOn ? "Disattiva audio motore" : "Attiva audio motore"} title="Audio motore">
             <span className="c3d-sound-ico" aria-hidden="true">{soundOn ? "🔊" : "🔈"}</span>
-            <span className="c3d-sound-txt">{soundOn ? "Audio on" : "Attiva audio"}</span>
+            <span className="c3d-sound-txt">{soundOn ? "Disattiva audio" : "Attiva audio"}</span>
           </button>
         )}
         <div className="c3d-bar"><i ref={bar}></i></div>

@@ -80,8 +80,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div><h5>Contatti</h5><a href={"mailto:" + IM.email}>{IM.email}</a><a href={"tel:" + IM.tel}>{IM.phone}</a><Link to="/contatti">Richiedi una consulenza</Link></div>
           </div>
           <div className="foot-bottom">
-            <span>© {new Date().getFullYear()} Inside Mobility</span>
-            <span style={{ whiteSpace: "nowrap" }}>Design e sviluppo su misura da <a href="https://agylax.com" target="_blank" rel="noopener">Agylax</a></span>
+            <span>© {new Date().getFullYear()} Inside Mobility — Tutti i diritti sono riservati.</span>
+            <span style={{ whiteSpace: "nowrap" }}>No templates. Just <a href="https://agylax.com" target="_blank" rel="noopener">Agylax</a>.</span>
           </div>
         </div>
       </footer>
